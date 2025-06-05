@@ -13,6 +13,18 @@ interface ChatMessage {
 
 const chat_page = () => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -24,15 +36,13 @@ const chat_page = () => {
       const isInputFocused = document.activeElement === inputRef.current;
 
       if (!isInputFocused && isTyping) {
-        e.preventDefault(); // prevent default action (like scrolling)
+        e.preventDefault();
         inputRef.current?.focus();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -81,7 +91,6 @@ const chat_page = () => {
           <h1 className="font-semibold text-3xl text-center text-gray-700 mb-6">
             First Aid Assistant
           </h1>
-
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-20">
               <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
@@ -106,6 +115,7 @@ const chat_page = () => {
               </div>
             ))
           )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
