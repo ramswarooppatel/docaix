@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SignalIndicators } from "@/components/signal-indicators";
 import { EmergencyActions } from "@/components/emergency-actions";
+import { FAQ } from "@/components/FAQ";
+import { parseResponseWithFAQ } from "@/lib/parseFAQ";
 import {
   MessageCircle,
   SendHorizonal,
@@ -22,12 +24,18 @@ import VoiceInput from "@/components/VoiceInput";
 import VoiceWaveAnimation from "@/components/VoiceWaveAnimation";
 import SpeakButton from "@/components/SpeakButton";
 
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
 interface ChatMessage {
   id: number;
   sender: "user" | "bot";
   text: string;
   timestamp: Date;
   sessionId?: string;
+  faqs?: FAQItem[];
 }
 
 const chat_page = () => {
@@ -38,9 +46,7 @@ const chat_page = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isVoiceListening, setIsVoiceListening] = useState(false); // Add this state
-
-  // Add session management
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
 
   const scrollToBottom = () => {
@@ -91,9 +97,8 @@ const chat_page = () => {
     setIsLoading(true);
 
     try {
-      // Replace with your Render URL
       const res = await fetch(
-        "https://firstaid-chat-bot-api.onrender.com/chat", //Render URL
+        "https://firstaid-chat-bot-api.onrender.com/chat",
         {
           method: "POST",
           headers: {
@@ -115,21 +120,25 @@ const chat_page = () => {
         setSessionId(data.session_id);
       }
 
+      // Parse the response to extract FAQs
+      const parsedResponse = parseResponseWithFAQ(data.reply || "Sorry, I couldn't understand that.");
+
       const botMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "bot",
-        text: data.reply || "Sorry, I couldn't understand that.",
+        text: parsedResponse.mainContent,
         timestamp: new Date(),
         sessionId: data.session_id,
+        faqs: parsedResponse.faqs,
       };
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error("Error generating response:", error);
+      console.error("Error:", error);
       const errorMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "bot",
-        text: "I'm having trouble processing your request. Please try again later.",
+        text: "Sorry, I'm having trouble connecting. Please try again or use the emergency buttons if this is urgent.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -153,7 +162,7 @@ const chat_page = () => {
 
     try {
       const res = await fetch(
-        "https://firstaid-chat-bot-api.onrender.com/chat", //Render URL
+        "https://firstaid-chat-bot-api.onrender.com/chat",
         {
           method: "POST",
           headers: {
@@ -175,21 +184,25 @@ const chat_page = () => {
         setSessionId(data.session_id);
       }
 
+      // Parse the response to extract FAQs
+      const parsedResponse = parseResponseWithFAQ(data.reply || "Sorry, I couldn't understand that.");
+
       const botMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "bot",
-        text: data.reply || "Sorry, I couldn't understand that.",
+        text: parsedResponse.mainContent,
         timestamp: new Date(),
         sessionId: data.session_id,
+        faqs: parsedResponse.faqs,
       };
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error("Voice input error:", error);
+      console.error("Error:", error);
       const errorMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "bot",
-        text: "Sorry, there was a problem processing your voice command.",
+        text: "Sorry, I'm having trouble connecting. Please try again or use the emergency buttons if this is urgent.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -198,13 +211,9 @@ const chat_page = () => {
     }
   };
 
-  const handleVoiceListeningChange = (listening: boolean) => {
-    setIsVoiceListening(listening);
-  };
-
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Enhanced Header - Mobile Optimized */}
+      {/* Header */}
       <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
         <div className="w-full max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -220,9 +229,7 @@ const chat_page = () => {
               <h1 className="font-bold text-sm sm:text-xl text-slate-800 truncate">
                 DOCai Assistant
               </h1>
-              <p className="text-xs text-slate-600 hidden sm:block">
-                AI-Powered Medical Support
-              </p>
+              <p className="text-xs text-slate-600 hidden sm:block">Emergency Medical Support</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -231,19 +238,17 @@ const chat_page = () => {
                 <Settings className="w-4 h-4" />
               </Button>
             </Link>
-            <div className="flex-shrink-0">
-              <SignalIndicators className="scale-75 sm:scale-100" />
-            </div>
+            <SignalIndicators className="scale-75 sm:scale-100" />
           </div>
         </div>
       </div>
 
-      {/* Main content area - Mobile Optimized */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-3 sm:py-6">
-        <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4">
+        <div className="w-full max-w-4xl mx-auto space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center text-slate-600 mt-10 sm:mt-20 px-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center shadow-lg">
+            <div className="text-center py-8 sm:py-16">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Sparkles className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">
@@ -254,7 +259,7 @@ const chat_page = () => {
               </p>
               <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
                 I'm here to provide first aid guidance and emergency assistance.
-                For immediate emergencies, use the buttons below to call 108 or
+                For immediate emergencies, use the emergency buttons below to call 108 or
                 alert your contacts.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 max-w-lg mx-auto text-xs">
@@ -277,57 +282,55 @@ const chat_page = () => {
                     msg.sender === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {/* Avatar - Mobile Optimized */}
+                  {/* Avatar */}
                   {msg.sender === "bot" && (
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                       <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   )}
 
-                  {/* Enhanced Message bubble with speaker button - Mobile Optimized */}
-                  <div className="flex flex-col max-w-[85%] sm:max-w-2xl">
+                  {/* Message Content */}
+                  <div
+                    className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+                      msg.sender === "user"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ml-auto"
+                        : "bg-white text-slate-800 border border-slate-200"
+                    }`}
+                  >
+                    <div className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                      {msg.text}
+                    </div>
+
+                    {/* FAQs Section */}
+                    {msg.sender === "bot" && msg.faqs && msg.faqs.length > 0 && (
+                      <FAQ faqs={msg.faqs} className="mt-3" />
+                    )}
+
+                    {/* Timestamp */}
                     <div
-                      className={`px-3 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-sm break-words ${
+                      className={`text-xs mt-2 ${
                         msg.sender === "user"
-                          ? "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
-                          : "bg-white text-slate-700 border border-slate-200"
+                          ? "text-blue-100"
+                          : "text-slate-500"
                       }`}
                     >
-                      {msg.sender === "bot" && (
-                        <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold mb-2">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                          DOCai
-                        </div>
-                      )}
-                      <div className="leading-relaxed text-sm sm:text-base break-words whitespace-pre-wrap">
-                        {msg.text}
-                      </div>
-                      <div
-                        className={`text-xs mt-2 sm:mt-3 flex items-center gap-1 ${
-                          msg.sender === "user"
-                            ? "text-slate-300"
-                            : "text-slate-400"
-                        }`}
-                      >
-                        {msg.timestamp.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </div>
-                    
-                    {/* Speaker button for bot messages */}
+
+                    {/* Voice Button for bot messages */}
                     {msg.sender === "bot" && (
-                      <div className="flex justify-start mt-1 ml-2">
+                      <div className="mt-2">
                         <SpeakButton 
-                          text={msg.text}
-                          className="opacity-60 hover:opacity-100"
+                          text={msg.text} 
+                          className="text-xs text-slate-500 hover:text-slate-700"
                         />
                       </div>
                     )}
                   </div>
 
-                  {/* User Avatar - Mobile Optimized */}
                   {msg.sender === "user" && (
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-slate-600 to-slate-700 text-white">
                       <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -336,30 +339,18 @@ const chat_page = () => {
                 </div>
               ))}
 
-              {/* Typing indicator - Mobile Optimized */}
+              {/* Loading State */}
               {isLoading && (
                 <div className="flex items-start gap-2 sm:gap-4 w-full justify-start">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                     <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <div className="bg-white text-slate-700 border border-slate-200 px-3 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-sm max-w-[85%] sm:max-w-2xl">
-                    <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold mb-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                      DOCai is thinking...
-                    </div>
-                    <div className="flex gap-1">
-                      <div
-                        className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0s" }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      />
+                  <div className="bg-white text-slate-800 border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <span className="text-sm text-slate-600 ml-2">DOCai is thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -370,56 +361,40 @@ const chat_page = () => {
         </div>
       </div>
 
-      {/* Enhanced input area with Emergency Actions - Mobile Optimized */}
-      <div className="sticky bottom-0 bg-white/90 backdrop-blur-lg border-t border-slate-200/60 p-2 sm:p-4 shadow-lg">
-        <div className="w-full max-w-4xl mx-auto space-y-2">
-          {/* Emergency Actions - Compact */}
-          <EmergencyActions />
+      {/* Input Area */}
+      <div className="bg-white border-t border-slate-200 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="w-full max-w-4xl mx-auto space-y-3">
+          {/* Voice Animation */}
+          {isVoiceListening && (
+            <div className="flex justify-center">
+              <VoiceWaveAnimation />
+            </div>
+          )}
 
-          {/* Chat Input */}
-          <div className="flex w-full items-end gap-2">
-            <div className="flex-1 min-w-0 relative">
+          {/* Input Row */}
+          <div className="flex gap-2 sm:gap-3">
+            <div className="flex-1 relative">
               <Input
                 ref={inputRef}
-                type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={isVoiceListening ? "🎤 Listening..." : "Describe your emergency..."}
-                className={`w-full h-10 sm:h-12 pl-3 sm:pl-4 pr-3 sm:pr-4 rounded-lg sm:rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm text-sm sm:text-base bg-white resize-none transition-all duration-200 ${
-                  isVoiceListening 
-                    ? "border-red-300 bg-red-50/50 ring-2 ring-red-200" 
-                    : ""
-                }`}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && !isLoading && handleSend()
-                }
-                disabled={isLoading || isVoiceListening}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Describe your symptoms or emergency..."
+                disabled={isLoading}
+                className="h-10 sm:h-12 pr-12 sm:pr-16 rounded-lg sm:rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
               />
-              
-              {/* Voice Wave Animation - Centered */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <VoiceWaveAnimation isActive={isVoiceListening} />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <VoiceInput
+                  onVoiceCommand={handleVoiceCommand}
+                  onListeningChange={setIsVoiceListening}
+                  disabled={isLoading}
+                />
               </div>
-              
-              {/* Voice Status with Timer */}
-              {isVoiceListening && (
-                <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-3 py-1 rounded-full flex items-center gap-2 shadow-lg animate-bounce">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  <span>Recording</span>
-                </div>
-              )}
             </div>
-
-            <VoiceInput 
-              onVoiceCommand={handleVoiceCommand} 
-              onListeningChange={handleVoiceListeningChange}
-            />
-
             <Button
-              type="button"
               onClick={handleSend}
-              disabled={isLoading || !input.trim() || isVoiceListening}
-              size="sm"
+              disabled={isLoading || !input.trim()}
+              size="lg"
               className="h-10 sm:h-12 px-3 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
               {isLoading ? (
@@ -433,10 +408,17 @@ const chat_page = () => {
             </Button>
           </div>
 
-          {/* Emergency Warning - Smaller */}
+          {/* Emergency Actions - Moved here */}
+          <div className="border-t border-slate-200 pt-3">
+            <div className="w-full">
+              <EmergencyActions />
+            </div>
+          </div>
+
+          {/* Emergency Warning */}
           <div className="text-center">
             <p className="text-xs text-slate-500 px-1">
-              🚨 For life-threatening emergencies, use the red "Call 108" button above
+              🚨 For life-threatening emergencies, use the red emergency buttons above
             </p>
           </div>
         </div>

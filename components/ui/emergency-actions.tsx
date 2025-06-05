@@ -61,35 +61,79 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
     });
   };
 
-  // Load emergency contacts from localStorage
+  // Load emergency contacts from localStorage and listen for changes
   useEffect(() => {
-    const savedContacts = localStorage.getItem("emergencyContacts");
-    if (savedContacts) {
-      setEmergencyContacts(JSON.parse(savedContacts));
-    } else {
-      // Set default emergency contacts if none exist
-      const defaultContacts: EmergencyContact[] = [
-        { id: "1", name: "Emergency Contact 1", phone: "+1234567890" },
-        { id: "2", name: "Emergency Contact 2", phone: "+0987654321" },
-      ];
-      setEmergencyContacts(defaultContacts);
-      localStorage.setItem("emergencyContacts", JSON.stringify(defaultContacts));
-    }
+    const loadContacts = () => {
+      const savedContacts = localStorage.getItem("emergencyContacts");
+      if (savedContacts) {
+        try {
+          const parsedContacts = JSON.parse(savedContacts);
+          setEmergencyContacts(parsedContacts);
+          console.log('Loaded emergency contacts:', parsedContacts);
+        } catch (error) {
+          console.error('Error parsing emergency contacts:', error);
+          setEmergencyContacts([]);
+        }
+      } else {
+        // No default contacts - let user add them through settings
+        setEmergencyContacts([]);
+        console.log('No emergency contacts found in localStorage');
+      }
+    };
+
+    // Load contacts initially
+    loadContacts();
+
+    // Listen for localStorage changes (when contacts are updated in settings)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "emergencyContacts") {
+        loadContacts();
+      }
+    };
+
+    // Listen for custom events when contacts are updated within the same tab
+    const handleContactsUpdate = () => {
+      loadContacts();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('emergencyContactsUpdated', handleContactsUpdate);
 
     // Get initial location
     getCurrentLocation().then(setLocation);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('emergencyContactsUpdated', handleContactsUpdate);
+    };
   }, []);
 
   // Call emergency services (108)
-  const callEmergencyServices = () => {
-    // Create a phone link that works on mobile
+  const callEmergencyServices108 = () => {
     window.location.href = "tel:108";
+  };
+
+  // Call emergency services (112)
+  const callEmergencyServices112 = () => {
+    window.location.href = "tel:112";
   };
 
   // Send emergency message to all saved contacts
   const sendEmergencyMessage = async () => {
-    if (emergencyContacts.length === 0) {
-      alert("No emergency contacts found. Please add emergency contacts first.");
+    // Reload contacts from localStorage to ensure we have the latest
+    const savedContacts = localStorage.getItem("emergencyContacts");
+    let currentContacts: EmergencyContact[] = [];
+    
+    if (savedContacts) {
+      try {
+        currentContacts = JSON.parse(savedContacts);
+      } catch (error) {
+        console.error('Error parsing emergency contacts:', error);
+      }
+    }
+
+    if (currentContacts.length === 0) {
+      alert("No emergency contacts found. Please add emergency contacts in Settings first.");
       return;
     }
 
@@ -109,36 +153,48 @@ If you receive this message, please check on me immediately or call emergency se
 This message was sent automatically through the DOCai Emergency System.`;
 
     // Create SMS links for each contact
-    emergencyContacts.forEach((contact, index) => {
+    currentContacts.forEach((contact, index) => {
       setTimeout(() => {
         const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(emergencyMessage)}`;
         window.open(smsUrl, '_blank');
-      }, index * 1000); // Stagger the messages by 1 second each
+      }, index * 1000);
     });
 
-    alert(`Emergency messages sent to ${emergencyContacts.length} contacts!`);
+    alert(`Emergency messages sent to ${currentContacts.length} contacts: ${currentContacts.map(c => c.name).join(', ')}`);
   };
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Emergency Buttons - Small and Horizontal */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        {/* Call 108 Button - Smaller */}
+      {/* Emergency Buttons - Three buttons in a row */}
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        {/* Call 108 Button - First third */}
         <Button
-          onClick={callEmergencyServices}
+          onClick={callEmergencyServices108}
           size="sm"
-          className="w-full h-8 sm:h-9 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 text-xs sm:text-sm"
+          className="w-full h-8 sm:h-9 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1 text-xs sm:text-sm"
         >
           <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          <span>Call 108</span>
+          <span className="hidden sm:inline">Call</span>
+          <span>108</span>
         </Button>
 
-        {/* Emergency Message Button - Smaller */}
+        {/* Call 112 Button - Second third */}
+        <Button
+          onClick={callEmergencyServices112}
+          size="sm"
+          className="w-full h-8 sm:h-9 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1 text-xs sm:text-sm"
+        >
+          <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          <span className="hidden sm:inline">Call</span>
+          <span>112</span>
+        </Button>
+
+        {/* Emergency Message Button - Third */}
         <Button
           onClick={sendEmergencyMessage}
           disabled={isGettingLocation}
           size="sm"
-          className="w-full h-8 sm:h-9 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs sm:text-sm"
+          className="w-full h-8 sm:h-9 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1 disabled:opacity-50 text-xs sm:text-sm"
         >
           {isGettingLocation ? (
             <>
@@ -148,45 +204,24 @@ This message was sent automatically through the DOCai Emergency System.`;
           ) : (
             <>
               <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span>Alert Contacts</span>
+              <span className="hidden sm:inline">Alert</span>
+              <span className="sm:hidden">SOS</span>
+              {emergencyContacts.length > 0 && (
+                <span className="hidden sm:inline text-xs opacity-75">
+                  ({emergencyContacts.length})
+                </span>
+              )}
             </>
           )}
         </Button>
       </div>
 
-      {/* Compact Location and Contacts Info */}
-      {/* <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 space-y-1.5">
-        <div className="flex items-start gap-1.5 text-xs">
-          <MapPin className="w-3 h-3 text-slate-600 flex-shrink-0 mt-0.5" />
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-slate-700">Location:</div>
-            <div className="text-slate-600 break-words text-xs leading-tight">{location}</div>
-          </div>
+      {/* Show contact count or prompt to add contacts */}
+      {emergencyContacts.length === 0 && (
+        <div className="text-center text-xs text-slate-500 mt-1">
+          Add emergency contacts in Settings to enable SOS alerts
         </div>
-
-        <div className="flex items-start gap-1.5 text-xs">
-          <Users className="w-3 h-3 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-blue-700">Contacts ({emergencyContacts.length}):</div>
-            <div className="space-y-0.5">
-              {emergencyContacts.length > 0 ? (
-                emergencyContacts.slice(0, 2).map((contact, index) => (
-                  <div key={contact.id} className="text-blue-600 text-xs leading-tight">
-                    {index + 1}. {contact.name}
-                  </div>
-                ))
-              ) : (
-                <div className="text-blue-600 text-xs italic">No contacts added</div>
-              )}
-              {emergencyContacts.length > 2 && (
-                <div className="text-blue-600 text-xs">
-                  +{emergencyContacts.length - 2} more
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div> */}
+      )}
     </div>
   );
 };
