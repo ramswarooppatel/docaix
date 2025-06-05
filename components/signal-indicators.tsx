@@ -26,14 +26,19 @@ export const SignalIndicators: React.FC<SignalIndicatorsProps> = ({
     batteryCharging: false,
     networkType: "unknown",
     connectionSpeed: "unknown",
-    onlineStatus: navigator.onLine,
-    platform: navigator.platform,
-    userAgent: navigator.userAgent,
+    onlineStatus: typeof window !== "undefined" ? navigator.onLine : true,
+    platform: typeof window !== "undefined" ? navigator.platform : "",
+    userAgent: typeof window !== "undefined" ? navigator.userAgent : "",
   });
 
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // Set client flag and initial time after hydration
+    setIsClient(true);
+    setCurrentTime(new Date());
+
     // Update time every second
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date());
@@ -82,11 +87,11 @@ export const SignalIndicators: React.FC<SignalIndicatorsProps> = ({
     // Get network information
     const getNetworkInfo = () => {
       try {
-        // @ts-ignore - Connection API
+        // Type-safe network API access
         const connection =
-          navigator.connection ||
-          navigator.mozConnection ||
-          navigator.webkitConnection;
+          (navigator as any).connection ||
+          (navigator as any).mozConnection ||
+          (navigator as any).webkitConnection;
 
         if (connection) {
           setDeviceInfo((prev) => ({
@@ -126,12 +131,11 @@ export const SignalIndicators: React.FC<SignalIndicatorsProps> = ({
         console.log("Connection API not supported");
       }
 
-      // @ts-ignore - Device memory
+      // Device memory check
       if ("deviceMemory" in navigator) {
-        // @ts-ignore
         setDeviceInfo((prev) => ({
           ...prev,
-          deviceMemory: navigator.deviceMemory,
+          deviceMemory: (navigator as any).deviceMemory,
         }));
       }
     };
@@ -203,13 +207,15 @@ export const SignalIndicators: React.FC<SignalIndicatorsProps> = ({
     <div
       className={`flex items-center gap-1 sm:gap-3 text-xs sm:text-sm ${className}`}
     >
-      {/* Current Time - Mobile Optimized */}
-      <div className="text-xs sm:text-sm font-mono font-semibold text-slate-800 bg-slate-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md">
-        {currentTime.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </div>
+      {/* Current Time - Mobile Optimized - Only show after hydration */}
+      {isClient && currentTime && (
+        <div className="text-xs sm:text-sm font-mono font-semibold text-slate-800 bg-slate-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md">
+          {currentTime.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
+      )}
 
       {/* Network Signal - Mobile Optimized */}
       <div
