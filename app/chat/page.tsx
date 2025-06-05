@@ -49,7 +49,7 @@ interface ChatMessage {
   image?: string;
 }
 
-const chat_page = () => {
+const ChatPage = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -66,6 +66,7 @@ const chat_page = () => {
   } | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'unknown'>('unknown');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -100,25 +101,168 @@ const chat_page = () => {
     }
   }, []);
 
+  // Check microphone permission on component mount
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isTyping = e.key.length === 1 || e.key === "Backspace";
-      const isInputFocused = document.activeElement === inputRef.current;
-
-      if (
-        !isInputFocused &&
-        isTyping &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.metaKey
-      ) {
-        e.preventDefault();
-        inputRef.current?.focus();
+    const checkMicPermission = async () => {
+      try {
+        if (navigator.permissions) {
+          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          setMicPermission(result.state === 'granted' ? 'granted' : result.state === 'denied' ? 'denied' : 'unknown');
+          
+          result.addEventListener('change', () => {
+            setMicPermission(result.state === 'granted' ? 'granted' : result.state === 'denied' ? 'denied' : 'unknown');
+          });
+        }
+      } catch (error) {
+        console.log('Permission API not supported');
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    
+    checkMicPermission();
   }, []);
+
+  const handleVoiceCommand = async (command: string) => {
+    if (isLoading) return;
+
+    console.log("🎤 Voice command received:", command);
+
+    if (!command || command.trim() === "") {
+      console.log("⚠️ Empty voice command received");
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: ++messageIdRef.current,
+      sender: "user",
+      text: command.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    await sendMessage(command.trim());
+  };
+
+  const sendMessage = async (message: string) => {
+    console.log("📤 Sending message to chat API:", message);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+        "https://firstaid-chat-bot-api.onrender.com/chat",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: message,
+            session_id: sessionId || undefined,
+            user_location: userLocation
+              ? {
+                  lat: userLocation.lat,
+                  lng: userLocation.lng,
+                }
+              : null,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Chat API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ Chat response data:", data);
+
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
+        console.log("🆔 Session ID updated:", data.session_id);
+      }
+
+      const parsedResponse = parseResponseWithFAQ(
+        data.reply || "Sorry, I couldn't understand that."
+      );
+
+      const botMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot",
+        text: parsedResponse.mainContent,
+        timestamp: new Date(),
+        sessionId: data.session_id,
+        faqs: parsedResponse.faqs,
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("❌ Chat API error:", error);
+      const errorMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot",
+        text: "Sorry, I'm having trouble connecting to the medical assistance service. Please try again or use the emergency buttons if this is urgent.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (selectedImage) {
+      console.log("🖼️ Handling send with image...");
+      return await handleSendWithImage();
+    }
+
+    if (!input.trim() || isLoading) {
+      console.log("⚠️ No input or already loading");
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: ++messageIdRef.current,
+      sender: "user",
+      text: input.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    const messageText = input.trim();
+    setInput("");
+
+    await sendMessage(messageText);
+  };
+
+  const handleSendWithImage = async () => {
+    if (!selectedImage) return;
+
+    setIsLoading(true);
+
+    try {
+      const userMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "user",
+        text: input.trim() || "Here's an image of my injury",
+        timestamp: new Date(),
+        image: selectedImage,
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+
+      const analysis = await analyzeImage(selectedImage);
+      const combinedMessage = input.trim()
+        ? `${input.trim()}\n\nImage Analysis: ${analysis}`
+        : `Image Analysis: ${analysis}`;
+
+      setInput("");
+      setSelectedImage(null);
+
+      await sendMessage(combinedMessage);
+    } catch (error) {
+      console.error("Error sending message with image:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const analyzeImage = async (imageBase64: string): Promise<string> => {
     console.log("🔍 Starting image analysis...");
@@ -126,18 +270,15 @@ const chat_page = () => {
     try {
       setIsAnalyzingImage(true);
 
-      // Validate that we have image data
       if (!imageBase64) {
         throw new Error("No image data provided");
       }
 
-      // Convert base64 to blob/file for FormData
       const base64Data = imageBase64.split(",")[1];
       if (!base64Data || base64Data.trim() === "") {
         throw new Error("Invalid image data format - empty base64 string");
       }
 
-      // Convert base64 to blob
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -146,38 +287,18 @@ const chat_page = () => {
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: "image/jpeg" });
 
-      // Create a File object from the blob
-      const file = new File([blob], "injury-image.jpg", { type: "image/jpeg" });
-
-      console.log("📤 Sending image to analysis API:", {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        apiUrl: "https://first-aid-injury-image-context.onrender.com/analyze",
-      });
-
-      // Create FormData for file upload
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", blob, "injury.jpg");
 
-      console.log("📋 FormData prepared:", {
-        hasImageField: formData.has("image"),
-        fileInFormData: formData.get("image") instanceof File,
-      });
+      console.log("📤 Sending image to analysis API...");
 
       const response = await fetch(
-        "https://first-aid-injury-image-context.onrender.com/analyze",
+        "https://injury-vision-api.onrender.com/analyze-image",
         {
           method: "POST",
-          body: formData, // Note: No Content-Type header needed for FormData
+          body: formData,
         }
       );
-
-      console.log("📡 API Response:", {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -187,7 +308,6 @@ const chat_page = () => {
           errorText: errorText,
         });
 
-        // If it's a validation error, provide more specific feedback
         if (response.status === 422) {
           throw new Error(
             `Invalid image format or missing data. Please ensure you're uploading a valid JPG image.`
@@ -202,7 +322,6 @@ const chat_page = () => {
       const data = await response.json();
       console.log("✅ Analysis result:", data);
 
-      // Extract the analysis from the API response based on the API structure
       const result =
         data.analysis ||
         data.context ||
@@ -217,7 +336,6 @@ const chat_page = () => {
     } catch (error) {
       console.error("❌ Image analysis error:", error);
 
-      // More specific error messages
       if (error instanceof TypeError && error.message.includes("fetch")) {
         return "Network error: Unable to connect to image analysis service. Please check your internet connection and try again.";
       } else if (
@@ -248,7 +366,6 @@ const chat_page = () => {
       lastModified: file.lastModified,
     });
 
-    // Check file type - only accept JPG/JPEG images
     const allowedTypes = ["image/jpeg", "image/jpg"];
     if (!allowedTypes.includes(file.type.toLowerCase())) {
       console.error("❌ Invalid file type:", file.type);
@@ -256,7 +373,6 @@ const chat_page = () => {
       return;
     }
 
-    // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       console.error("❌ File too large:", file.size);
       alert("Image size should be less than 5MB");
@@ -268,257 +384,27 @@ const chat_page = () => {
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
 
-      // Validate the base64 result
       if (!base64 || typeof base64 !== "string") {
         console.error("❌ Invalid FileReader result");
-        alert("Error processing the image file. Please try again.");
+        alert("Failed to read the image file. Please try again.");
         return;
       }
 
-      console.log("✅ Image converted to base64:", {
-        length: base64.length,
-        hasDataPrefix: base64.startsWith("data:"),
-        mimeType: base64.split(";")[0],
-        preview: base64.substring(0, 100) + "...",
-      });
-
+      console.log("✅ Image loaded successfully");
       setSelectedImage(base64);
     };
 
-    reader.onerror = (error) => {
-      console.error("❌ FileReader error:", error);
-      alert("Error reading the image file. Please try again.");
+    reader.onerror = () => {
+      console.error("❌ FileReader error");
+      alert("Failed to read the image file. Please try again.");
     };
 
     reader.readAsDataURL(file);
-
-    // Clear the input to allow re-selecting the same file
-    event.target.value = "";
-  };
-
-  const processLocationAwareMessage = (message: string) => {
-    // Check if the message is about finding hospitals or medical help
-    const hospitalKeywords = [
-      "hospital",
-      "emergency room",
-      "medical center",
-      "clinic",
-      "find hospitals",
-      "hospitals near me",
-      "nearest hospital",
-      "medical help",
-      "emergency medical",
-      "urgent care",
-    ];
-
-    const isHospitalQuery = hospitalKeywords.some((keyword) =>
-      message.toLowerCase().includes(keyword.toLowerCase())
-    );
-
-    if (isHospitalQuery && userLocation) {
-      // Enhance the message with location context
-      const enhancedMessage = `${message}\n\n[Note: User is located at coordinates ${userLocation.lat.toFixed(
-        6
-      )}, ${userLocation.lng.toFixed(
-        6
-      )} - please provide location-specific hospital recommendations if possible]`;
-      return enhancedMessage;
-    }
-
-    return message;
-  };
-
-  const handleSend = async () => {
-    // Check if we have an image to analyze
-    if (selectedImage) {
-      console.log("🖼️ Handling send with image...");
-      return await handleSendWithImage();
-    }
-
-    // Regular text message handling
-    if (!input.trim() || isLoading) {
-      console.log("⚠️ No input or already loading");
-      return;
-    }
-
-    // Create and add user message first
-    const userMessage: ChatMessage = {
-      id: ++messageIdRef.current,
-      sender: "user",
-      text: input.trim(),
-      timestamp: new Date(),
-    };
-
-    console.log("💬 Adding user message:", userMessage);
-    setMessages((prev) => [...prev, userMessage]);
-
-    // Store the input and clear it
-    const currentInput = input.trim();
-    setInput("");
-
-    // Send to API
-    await sendMessage(currentInput);
-  };
-
-  const handleSendWithImage = async () => {
-    if ((!input.trim() && !selectedImage) || isLoading) {
-      console.log("⚠️ No content to send or already loading");
-      return;
-    }
-
-    console.log("🚀 Starting handleSendWithImage:", {
-      hasInput: !!input.trim(),
-      hasImage: !!selectedImage,
-      isLoading,
-      isAnalyzingImage,
-    });
-
-    // Create user message with image FIRST - before analysis
-    const userMessage: ChatMessage = {
-      id: ++messageIdRef.current,
-      sender: "user",
-      text: input.trim() || "Image uploaded for analysis",
-      timestamp: new Date(),
-      image: selectedImage || undefined,
-    };
-
-    console.log("💬 Adding user message with image:", userMessage);
-    setMessages((prev) => [...prev, userMessage]);
-
-    // Store inputs and clear them
-    const currentInput = input.trim();
-    const currentImage = selectedImage;
-    setInput("");
-    setSelectedImage(null);
-
-    // Now analyze image and prepare message for API
-    let messageText = currentInput;
-    let imageContext = "";
-
-    if (currentImage) {
-      console.log("🔍 Analyzing image before sending...");
-      imageContext = await analyzeImage(currentImage);
-      console.log("📋 Image analysis result:", imageContext);
-
-      if (messageText) {
-        messageText = `${messageText}\n\n[Image Analysis]: ${imageContext}`;
-      } else {
-        messageText = `I've uploaded an image for medical analysis. ${imageContext}`;
-      }
-    }
-
-    // Send to chat API
-    await sendMessage(messageText);
-  };
-
-  const sendMessage = async (message: string) => {
-    console.log("📤 Sending message to chat API:", message);
-    setIsLoading(true);
-
-    try {
-      // Process the message for location awareness
-      const processedMessage = processLocationAwareMessage(message);
-
-      const response = await fetch(
-        "https://firstaid-chat-bot-api.onrender.com/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: processedMessage,
-            session_id: sessionId || undefined,
-            user_location: userLocation
-              ? {
-                  lat: userLocation.lat,
-                  lng: userLocation.lng,
-                }
-              : null,
-          }),
-        }
-      );
-
-      console.log("📡 Chat API Response:", {
-        status: response.status,
-        statusText: response.statusText,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Chat API failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("✅ Chat response data:", data);
-
-      // Update session ID if provided
-      if (data.session_id && !sessionId) {
-        setSessionId(data.session_id);
-        console.log("🆔 Session ID updated:", data.session_id);
-      }
-
-      // Parse the response to extract FAQs
-      const parsedResponse = parseResponseWithFAQ(
-        data.reply || "Sorry, I couldn't understand that."
-      );
-
-      const botMessage: ChatMessage = {
-        id: ++messageIdRef.current,
-        sender: "bot",
-        text: parsedResponse.mainContent,
-        timestamp: new Date(),
-        sessionId: data.session_id,
-        faqs: parsedResponse.faqs,
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
-      console.error("❌ Chat API error:", error);
-      const errorMessage: ChatMessage = {
-        id: ++messageIdRef.current,
-        sender: "bot",
-        text: "Sorry, I'm having trouble connecting to the medical assistance service. Please try again or use the emergency buttons if this is urgent.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVoiceCommand = async (command: string) => {
-    if (isLoading) return;
-
-    console.log("🎤 Voice command received:", command);
-
-    // Validate the command
-    if (!command || command.trim() === "") {
-      console.log("⚠️ Empty voice command received");
-      return;
-    }
-
-    // Create and show user message first
-    const userMessage: ChatMessage = {
-      id: ++messageIdRef.current,
-      sender: "user",
-      text: command.trim(),
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-
-    // Then send to API
-    await sendMessage(command.trim());
-  };
-
-  const handleVoiceListeningChange = (isListening: boolean) => {
-    console.log("🎤 Voice listening state changed:", isListening);
-    setIsVoiceListening(isListening);
   };
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      {/* Enhanced Header */}
+      {/* Enhanced Header with Voice Status */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5 z-10 shadow-sm">
         <div className="w-full max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -542,13 +428,30 @@ const chat_page = () => {
                     📍 Location Active
                   </span>
                 )}
+                {isVoiceListening && (
+                  <span className="inline-flex items-center gap-1 ml-2 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs animate-pulse">
+                    <Mic className="w-3 h-3" />
+                    Listening
+                  </span>
+                )}
               </h1>
               <p className="text-xs text-slate-600 hidden sm:block">
                 Emergency Medical Support
+                {isVoiceListening && (
+                  <span className="text-red-600 font-semibold ml-2">
+                    • Voice Active
+                  </span>
+                )}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
+            {isVoiceListening && (
+              <div className="bg-red-100 border border-red-300 rounded-full p-2 animate-pulse">
+                <MicOff className="w-4 h-4 text-red-600" />
+              </div>
+            )}
+            
             <Link href="/settings">
               <Button
                 variant="ghost"
@@ -563,7 +466,7 @@ const chat_page = () => {
         </div>
       </div>
 
-      {/* Chat Messages - Mobile optimized */}
+      {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
         <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4">
           {messages.length === 0 ? (
@@ -588,16 +491,6 @@ const chat_page = () => {
                 Upload images of injuries for analysis or describe your
                 symptoms.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 max-w-lg mx-auto text-xs">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
-                  <Heart className="w-4 h-4 mx-auto mb-1" />
-                  <div className="font-semibold">Emergency Care</div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 text-blue-700">
-                  <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4 mx-auto mb-1" />
-                  <div className="font-semibold text-xs">First Aid Guide</div>
-                </div>
-              </div>
 
               {/* Quick Actions */}
               <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -706,7 +599,7 @@ const chat_page = () => {
                 </div>
               ))}
 
-              {/* Enhanced Loading State */}
+              {/* Loading State */}
               {(isLoading || isAnalyzingImage) && (
                 <div className="flex items-start gap-2 sm:gap-4 w-full justify-start animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white">
@@ -734,48 +627,49 @@ const chat_page = () => {
         </div>
       </div>
 
-      {/* Enhanced Input Area */}
+      {/* Enhanced Input Area with Voice Feedback */}
       <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5">
         <div className="w-full max-w-4xl mx-auto space-y-4">
-          {/* Voice Animation */}
+          {/* Voice Status Indicator */}
           {isVoiceListening && (
-            <div className="flex justify-center">
-              <VoiceWaveAnimation isActive={isVoiceListening} />
+            <div className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 rounded-2xl shadow-lg animate-pulse">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-md" />
+                <Mic className="h-6 w-6 text-red-600 animate-bounce" />
+                <span className="text-base font-bold text-red-700">
+                  🎤 LISTENING... SPEAK NOW
+                </span>
+              </div>
+              <VoiceWaveAnimation isActive={isVoiceListening} className="ml-4" />
+              
+              <Button
+                onClick={() => setIsVoiceListening(false)}
+                variant="outline"
+                size="sm"
+                className="ml-4 h-8 px-3 text-red-600 border-red-300 hover:bg-red-50 font-semibold"
+              >
+                <MicOff className="w-4 h-4 mr-1" />
+                STOP
+              </Button>
             </div>
           )}
 
-          {/* Image Preview */}
-          {selectedImage && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-2xl">
-              <div className="relative">
-                <img
-                  src={selectedImage}
-                  alt="Selected injury image"
-                  className="w-16 h-16 object-cover rounded-xl border border-blue-300"
-                />
-                <button
-                  onClick={() => setSelectedImage(null)}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                  title="Remove image"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-blue-900">
-                  Image ready for medical analysis
-                </p>
-                <p className="text-xs text-blue-600">
-                  This image will be analyzed for injury context and medical
-                  guidance
-                </p>
-              </div>
-              {isAnalyzingImage && (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs">Analyzing...</span>
-                </div>
-              )}
+          {/* Microphone Permission Status */}
+          {micPermission === 'denied' && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700">
+              <MicOff className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                Microphone access denied. Please enable microphone permissions to use voice input.
+              </span>
+            </div>
+          )}
+
+          {micPermission === 'granted' && !isVoiceListening && (
+            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700">
+              <Mic className="w-4 h-4" />
+              <span className="text-xs">
+                🎤 Voice input ready - Click the microphone button to start
+              </span>
             </div>
           )}
 
@@ -795,9 +689,9 @@ const chat_page = () => {
                     : "Describe your symptoms, emergency, or upload an injury photo..."
                 }
                 disabled={isLoading || isAnalyzingImage}
-                className="h-12 sm:h-14 pr-24 sm:pr-28 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm"
+                className="h-12 sm:h-14 pr-28 sm:pr-32 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading || isAnalyzingImage}
@@ -806,13 +700,28 @@ const chat_page = () => {
                 >
                   <Camera className="w-4 h-4" />
                 </button>
-                <VoiceInput
-                  onVoiceCommand={handleVoiceCommand}
-                  onListeningChange={handleVoiceListeningChange}
-                  disabled={isLoading || isAnalyzingImage}
-                />
+                
+                {/* Voice Button with Status */}
+                <div className="relative">
+                  <VoiceInput
+                    onVoiceCommand={handleVoiceCommand}
+                    onListeningChange={setIsVoiceListening}
+                  />
+                  
+                  {/* Voice Status Overlay */}
+                  {isVoiceListening && (
+                    <div className="absolute -top-16 right-0 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold z-20 shadow-lg animate-bounce">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+                        🎤 LISTENING
+                      </div>
+                      <div className="absolute bottom-0 right-4 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-red-600"></div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+            
             <Button
               onClick={handleSend}
               disabled={
@@ -833,7 +742,7 @@ const chat_page = () => {
               )}
             </Button>
           </div>
-
+          
           {/* Hidden File Input */}
           <input
             ref={fileInputRef}
@@ -863,4 +772,4 @@ const chat_page = () => {
   );
 };
 
-export default chat_page;
+export default ChatPage;

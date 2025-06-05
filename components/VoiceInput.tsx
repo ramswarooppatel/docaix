@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import { useSettings } from "../hooks/useSettings";
+import { useSound } from "../hooks/useSound";
 import {
   Mic,
   MicOff,
@@ -13,40 +14,42 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 
-interface Props {
+interface VoiceInputProps {
   onVoiceCommand: (command: string) => void;
   onListeningChange?: (isListening: boolean) => void;
   disabled?: boolean;
 }
 
-const VoiceInput: React.FC<Props> = ({
+const VoiceInput: React.FC<VoiceInputProps> = ({
   onVoiceCommand,
   onListeningChange,
   disabled = false,
 }) => {
-  const { settings, getVoiceSettings } = useSettings();
+  const { getVoiceSettings } = useSettings();
   const voiceSettings = getVoiceSettings();
 
-  const {
-    transcript,
-    isListening,
-    startListening,
-    cancelListening,
-    error,
-    isSupported,
-  } = useSpeechToText();
-  const lastProcessedTranscript = useRef("");
   const [timer, setTimer] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [micPermission, setMicPermission] = useState<
+    "granted" | "denied" | "unknown"
+  >("unknown");
   const [userLocation, setUserLocation] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [isIOSDevice, setIsIOSDevice] = useState(false);
-  const [micPermission, setMicPermission] = useState<
-    "unknown" | "granted" | "denied"
-  >("unknown");
+
+  const lastProcessedTranscript = useRef<string>("");
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const {
+    transcript,
+    isListening,
+    startListening,
+    stopListening,
+    cancelListening,
+    isSupported,
+  } = useSpeechToText();
 
   // Simple sound fallback without external files
   const playSound = (frequency: number = 800, duration: number = 100) => {
@@ -75,7 +78,7 @@ const VoiceInput: React.FC<Props> = ({
     }
   };
 
-  // Detect mobile device and iOS specifically
+  // Detect mobile device
   useEffect(() => {
     const detectMobile = () => {
       const userAgent = navigator.userAgent.toLowerCase();
@@ -93,72 +96,60 @@ const VoiceInput: React.FC<Props> = ({
         window.innerWidth <= 768 ||
         "ontouchstart" in window;
 
-      const isIOS =
-        /ipad|iphone|ipod/.test(userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
       setIsMobile(isMobileDevice);
-      setIsIOSDevice(isIOS);
-
-      console.log("Device detection:", {
-        isMobile: isMobileDevice,
-        isIOS: isIOS,
-        userAgent: userAgent,
-        windowWidth: window.innerWidth,
-        isSupported: isSupported,
-      });
     };
 
     detectMobile();
     window.addEventListener("resize", detectMobile);
     return () => window.removeEventListener("resize", detectMobile);
-  }, [isSupported]);
+  }, []);
 
   // Check microphone permissions
   useEffect(() => {
-    const checkMicPermission = async () => {
+    const checkPermissions = async () => {
       try {
-        if ("permissions" in navigator) {
-          const permission = await navigator.permissions.query({
+        if (navigator.permissions) {
+          const result = await navigator.permissions.query({
             name: "microphone" as PermissionName,
           });
+          setMicPermission(
+            result.state === "granted"
+              ? "granted"
+              : result.state === "denied"
+              ? "denied"
+              : "unknown"
+          );
 
-          const mapPermissionState = (
-            state: PermissionState
-          ): "unknown" | "granted" | "denied" => {
-            if (state === "granted") return "granted";
-            if (state === "denied") return "denied";
-            return "unknown";
-          };
-
-          setMicPermission(mapPermissionState(permission.state));
-          console.log("Microphone permission status:", permission.state);
-
-          permission.addEventListener("change", () => {
-            setMicPermission(mapPermissionState(permission.state));
-            console.log("Microphone permission changed to:", permission.state);
+          result.addEventListener("change", () => {
+            setMicPermission(
+              result.state === "granted"
+                ? "granted"
+                : result.state === "denied"
+                ? "denied"
+                : "unknown"
+            );
           });
         }
       } catch (error) {
-        console.log("Permission API not supported or error:", error);
+        console.log("Permission API not supported");
       }
     };
 
-    checkMicPermission();
+    checkPermissions();
   }, []);
 
-  // Enhanced location access for mobile (optional, won't block voice input)
+  // Get user location for enhanced commands
   useEffect(() => {
-    const getMobileLocation = () => {
+    const getLocation = () => {
       if (!navigator.geolocation) {
-        console.log("Geolocation not supported on this device");
+        console.log("Geolocation not supported");
         return;
       }
 
       const options = {
-        enableHighAccuracy: false, // Faster but less accurate
-        timeout: 5000, // Short timeout
-        maximumAge: 600000, // 10 minutes cache
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 600000,
       };
 
       navigator.geolocation.getCurrentPosition(
@@ -171,41 +162,25 @@ const VoiceInput: React.FC<Props> = ({
         },
         (error) => {
           console.log(
-            "Voice input: Location access failed (this is optional):",
+            "Voice input: Location access failed (optional):",
             error.message
           );
-          // Don't block voice input if location fails
         },
         options
       );
     };
 
-    // Only try to get location if it hasn't been permanently denied
-    if (navigator.permissions) {
-      navigator.permissions
-        .query({ name: "geolocation" })
-        .then((permission) => {
-          if (permission.state !== "denied") {
-            getMobileLocation();
-          }
-        })
-        .catch(() => {
-          // Fallback for browsers without permission API
-          getMobileLocation();
-        });
-    } else {
-      getMobileLocation();
-    }
+    getLocation();
   }, []);
 
-  // Enhanced timer for mobile
+  // Timer for listening duration
   useEffect(() => {
     if (isListening) {
       setTimer(0);
       timerRef.current = setInterval(() => {
         setTimer((prev) => {
           const newTime = prev + 1;
-          // Auto-stop after 30 seconds to save battery
+          // Auto-stop after 30 seconds
           if (newTime >= 30) {
             handleCancel();
             return prev;
@@ -228,7 +203,7 @@ const VoiceInput: React.FC<Props> = ({
     };
   }, [isListening]);
 
-  // Notify parent of listening state changes
+  // Notify parent component of listening state changes
   useEffect(() => {
     onListeningChange?.(isListening);
   }, [isListening, onListeningChange]);
@@ -295,7 +270,7 @@ const VoiceInput: React.FC<Props> = ({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Enhanced mobile voice start with permission handling
+  // Voice start with permission handling
   const handleVoiceStart = async () => {
     if (disabled || !isSupported) return;
 
@@ -311,8 +286,8 @@ const VoiceInput: React.FC<Props> = ({
       } catch (error) {
         console.error("Microphone permission denied:", error);
         setMicPermission("denied");
-        alert(
-          "Microphone access is required for voice input. Please enable microphone permissions in your browser settings."
+        setError(
+          "Microphone access denied. Please enable microphone permissions."
         );
         return;
       }
@@ -323,7 +298,7 @@ const VoiceInput: React.FC<Props> = ({
     startListening();
   };
 
-  // Enhanced cancel handler with voice command detection
+  // Enhanced cancel handler
   const handleCancel = () => {
     console.log("Voice input cancelled by user");
 
@@ -332,48 +307,74 @@ const VoiceInput: React.FC<Props> = ({
       navigator.vibrate([200, 100, 200]); // Cancel vibration pattern
     }
 
-    playSound(400, 300); // Cancel sound - lower frequency, longer duration
+    playSound(400, 300); // Cancel sound
     cancelListening();
   };
 
-  // Simple listening indicator - just change the icon
-  if (isListening) {
+  // Show error state if not supported
+  if (!isSupported) {
     return (
       <div className="relative">
+        <Button
+          disabled={true}
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0 opacity-50"
+          title="Voice input not supported in this browser"
+        >
+          <MicOff className="h-4 w-4 text-gray-400" />
+        </Button>
+        <div className="absolute top-full right-0 mt-1 text-xs text-gray-500 whitespace-nowrap">
+          Voice not supported
+        </div>
+      </div>
+    );
+  }
+
+  // Simple listening indicator - expanded bar style
+  if (isListening) {
+    return (
+      <div className="relative flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg shadow-md">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <Mic className="h-3 w-3 text-red-600 animate-pulse" />
+          <span className="text-xs font-bold text-red-700">
+            🎤 LISTENING...{" "}
+            <span className="font-mono">{formatTimer(timer)}</span>
+          </span>
+          {userLocation && (
+            <span
+              title={`Location: ${userLocation.lat.toFixed(
+                4
+              )}, ${userLocation.lng.toFixed(4)}`}
+            >
+              <MapPin className="h-3 w-3 text-green-600" />
+            </span>
+          )}
+        </div>
+
         <Button
           onClick={handleCancel}
           variant="outline"
           size="sm"
-          className="h-8 w-8 p-0 bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400 touch-manipulation transition-all duration-200 animate-pulse"
+          className="h-6 w-6 p-0 bg-red-100 border-red-300 hover:bg-red-200 hover:border-red-400 transition-all duration-200"
           title="Click to stop listening"
         >
-          <MicOff className="h-4 w-4 text-red-600" />
+          <X className="h-3 w-3 text-red-600" />
         </Button>
-
-        {/* Timer indicator */}
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-mono">
-          {timer}
-        </div>
 
         {/* Live transcript tooltip */}
         {transcript && transcript.trim() && (
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 max-w-xs bg-black/80 text-white text-xs rounded-lg px-3 py-2 z-10">
-            <div className="text-center">
-              <p className="opacity-60">You said:</p>
+          <div className="absolute top-full left-0 mt-2 max-w-xs bg-black/80 text-white text-xs rounded-lg px-3 py-2 z-10">
+            <div className="text-left">
+              <p className="opacity-60 text-xs">You said:</p>
               <p className="font-medium">
                 "{transcript.substring(0, 50)}
                 {transcript.length > 50 ? "..." : ""}"
               </p>
             </div>
             {/* Arrow pointing up */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-black/80"></div>
-          </div>
-        )}
-
-        {/* Location indicator */}
-        {userLocation && (
-          <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-green-500 rounded-full border border-white flex items-center justify-center">
-            <MapPin className="w-2 h-2 text-white" />
+            <div className="absolute bottom-full left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-black/80"></div>
           </div>
         )}
       </div>
