@@ -20,6 +20,7 @@ import {
 import Link from "next/link";
 import VoiceInput from "@/components/VoiceInput";
 import VoiceWaveAnimation from "@/components/VoiceWaveAnimation";
+import SpeakButton from "@/components/SpeakButton";
 
 interface ChatMessage {
   id: number;
@@ -283,35 +284,47 @@ const chat_page = () => {
                     </div>
                   )}
 
-                  {/* Enhanced Message bubble - Mobile Optimized */}
-                  <div
-                    className={`px-3 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-sm max-w-[85%] sm:max-w-2xl break-words ${
-                      msg.sender === "user"
-                        ? "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
-                        : "bg-white text-slate-700 border border-slate-200"
-                    }`}
-                  >
-                    {msg.sender === "bot" && (
-                      <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold mb-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                        DOCai
-                      </div>
-                    )}
-                    <div className="leading-relaxed text-sm sm:text-base break-words whitespace-pre-wrap">
-                      {msg.text}
-                    </div>
+                  {/* Enhanced Message bubble with speaker button - Mobile Optimized */}
+                  <div className="flex flex-col max-w-[85%] sm:max-w-2xl">
                     <div
-                      className={`text-xs mt-2 sm:mt-3 flex items-center gap-1 ${
+                      className={`px-3 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-sm break-words ${
                         msg.sender === "user"
-                          ? "text-slate-300"
-                          : "text-slate-400"
+                          ? "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
+                          : "bg-white text-slate-700 border border-slate-200"
                       }`}
                     >
-                      {msg.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {msg.sender === "bot" && (
+                        <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold mb-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                          DOCai
+                        </div>
+                      )}
+                      <div className="leading-relaxed text-sm sm:text-base break-words whitespace-pre-wrap">
+                        {msg.text}
+                      </div>
+                      <div
+                        className={`text-xs mt-2 sm:mt-3 flex items-center gap-1 ${
+                          msg.sender === "user"
+                            ? "text-slate-300"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {msg.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
                     </div>
+                    
+                    {/* Speaker button for bot messages */}
+                    {msg.sender === "bot" && (
+                      <div className="flex justify-start mt-1 ml-2">
+                        <SpeakButton 
+                          text={msg.text}
+                          className="opacity-60 hover:opacity-100"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* User Avatar - Mobile Optimized */}
