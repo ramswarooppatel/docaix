@@ -66,7 +66,9 @@ const ChatPage = () => {
   } | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
-  const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'unknown'>('unknown');
+  const [micPermission, setMicPermission] = useState<
+    "granted" | "denied" | "unknown"
+  >("unknown");
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,18 +108,32 @@ const ChatPage = () => {
     const checkMicPermission = async () => {
       try {
         if (navigator.permissions) {
-          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          setMicPermission(result.state === 'granted' ? 'granted' : result.state === 'denied' ? 'denied' : 'unknown');
-          
-          result.addEventListener('change', () => {
-            setMicPermission(result.state === 'granted' ? 'granted' : result.state === 'denied' ? 'denied' : 'unknown');
+          const result = await navigator.permissions.query({
+            name: "microphone" as PermissionName,
+          });
+          setMicPermission(
+            result.state === "granted"
+              ? "granted"
+              : result.state === "denied"
+              ? "denied"
+              : "unknown"
+          );
+
+          result.addEventListener("change", () => {
+            setMicPermission(
+              result.state === "granted"
+                ? "granted"
+                : result.state === "denied"
+                ? "denied"
+                : "unknown"
+            );
           });
         }
       } catch (error) {
-        console.log('Permission API not supported');
+        console.log("Permission API not supported");
       }
     };
-    
+
     checkMicPermission();
   }, []);
 
@@ -293,7 +309,7 @@ const ChatPage = () => {
       console.log("📤 Sending image to analysis API...");
 
       const response = await fetch(
-        "https://injury-vision-api.onrender.com/analyze-image",
+        "https://first-aid-injury-image-context.onrender.com/analyze",
         {
           method: "POST",
           body: formData,
@@ -451,7 +467,7 @@ const ChatPage = () => {
                 <MicOff className="w-4 h-4 text-red-600" />
               </div>
             )}
-            
+
             <Link href="/settings">
               <Button
                 variant="ghost"
@@ -553,7 +569,10 @@ const ChatPage = () => {
                         {msg.text}
                       </div>
                     ) : (
-                      <EnhancedMessageDisplay text={msg.text} />
+                      <EnhancedMessageDisplay
+                        mainContent={msg.text}
+                        faqs={msg.faqs}
+                      />
                     )}
 
                     {/* FAQs Section */}
@@ -640,8 +659,11 @@ const ChatPage = () => {
                   🎤 LISTENING... SPEAK NOW
                 </span>
               </div>
-              <VoiceWaveAnimation isActive={isVoiceListening} className="ml-4" />
-              
+              <VoiceWaveAnimation
+                isActive={isVoiceListening}
+                className="ml-4"
+              />
+
               <Button
                 onClick={() => setIsVoiceListening(false)}
                 variant="outline"
@@ -655,16 +677,17 @@ const ChatPage = () => {
           )}
 
           {/* Microphone Permission Status */}
-          {micPermission === 'denied' && (
+          {micPermission === "denied" && (
             <div className="flex items-center gap-2 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700">
               <MicOff className="w-4 h-4" />
               <span className="text-sm font-medium">
-                Microphone access denied. Please enable microphone permissions to use voice input.
+                Microphone access denied. Please enable microphone permissions
+                to use voice input.
               </span>
             </div>
           )}
 
-          {micPermission === 'granted' && !isVoiceListening && (
+          {micPermission === "granted" && !isVoiceListening && (
             <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700">
               <Mic className="w-4 h-4" />
               <span className="text-xs">
@@ -700,14 +723,14 @@ const ChatPage = () => {
                 >
                   <Camera className="w-4 h-4" />
                 </button>
-                
+
                 {/* Voice Button with Status */}
                 <div className="relative">
                   <VoiceInput
                     onVoiceCommand={handleVoiceCommand}
                     onListeningChange={setIsVoiceListening}
                   />
-                  
+
                   {/* Voice Status Overlay */}
                   {isVoiceListening && (
                     <div className="absolute -top-16 right-0 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold z-20 shadow-lg animate-bounce">
@@ -721,7 +744,7 @@ const ChatPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <Button
               onClick={handleSend}
               disabled={
@@ -742,7 +765,7 @@ const ChatPage = () => {
               )}
             </Button>
           </div>
-          
+
           {/* Hidden File Input */}
           <input
             ref={fileInputRef}

@@ -1,21 +1,14 @@
 "use client";
 
 import React from "react";
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  Info, 
-  Heart, 
-  Clock, 
-  MapPin, 
-  Phone,
-  Shield,
+import {
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Heart,
   Stethoscope,
-  Eye,
-  Hand,
-  Thermometer,
-  Activity
 } from "lucide-react";
+import { FAQ } from "./FAQ";
 
 interface EnhancedMessageDisplayProps {
   text: string;
@@ -24,11 +17,19 @@ interface EnhancedMessageDisplayProps {
 
 export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
   text,
-  className = ""
+  className = "",
 }) => {
-  const parseAndFormatMessage = (message: string) => {
+  const parseAndFormatMessage = (message: string | undefined) => {
     const sections: Array<{
-      type: 'header' | 'emergency' | 'steps' | 'warning' | 'info' | 'symptoms' | 'advice';
+      type:
+        | "header"
+        | "emergency"
+        | "steps"
+        | "warning"
+        | "info"
+        | "symptoms"
+        | "advice"
+        | "faqs";
       content: string;
       icon?: React.ReactNode;
       color: string;
@@ -36,106 +37,189 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
       borderColor: string;
     }> = [];
 
+    // Handle undefined or empty message
+    if (!message) {
+      return sections; // Return empty sections array
+    }
+
     // Split message into lines
-    const lines = message.split('\n').filter(line => line.trim());
-    
-    let currentSection: any = null;
+    const lines = message.split("\n").filter((line) => line.trim());
+
     let currentSteps: string[] = [];
+    let currentAdviceItems: string[] = [];
+    let isInSeeADoctorSection = false;
 
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) continue;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
 
-      // Check for different types of content
-      if (trimmedLine.match(/^(DOCai|😕)/)) {
-        // Header/greeting
+      // Check for greeting/header
+      if (line.match(/^😊.*laceration/i) || line.match(/^It seems like/i)) {
         sections.push({
-          type: 'header',
-          content: trimmedLine.replace(/^(DOCai|😕)\s*/, ''),
+          type: "header",
+          content: line.replace(/^😊\s*/, ""),
           icon: <Heart className="w-4 h-4" />,
-          color: 'text-blue-700',
-          bgColor: 'bg-blue-50',
-          borderColor: 'border-blue-200'
+          color: "text-blue-700",
+          bgColor: "bg-blue-50",
+          borderColor: "border-blue-200",
         });
-      } else if (trimmedLine.match(/^[\*\s]*(?:STOP|CALL|CHECK|EMERGENCY|URGENT|IMMEDIATELY)/i)) {
-        // Emergency instructions
-        sections.push({
-          type: 'emergency',
-          content: trimmedLine.replace(/^\*+\s*/, '').replace(/\*+$/, ''),
-          icon: <AlertTriangle className="w-4 h-4" />,
-          color: 'text-red-700',
-          bgColor: 'bg-red-50',
-          borderColor: 'border-red-200'
-        });
-      } else if (trimmedLine.match(/^[\*\s]*(?:SEE A DOCTOR|SEEK MEDICAL|CONTACT|VISIT)/i)) {
-        // Medical advice
-        sections.push({
-          type: 'advice',
-          content: trimmedLine.replace(/^\*+\s*/, '').replace(/\*+$/, ''),
-          icon: <Stethoscope className="w-4 h-4" />,
-          color: 'text-purple-700',
-          bgColor: 'bg-purple-50',
-          borderColor: 'border-purple-200'
-        });
-      } else if (trimmedLine.match(/^[\*\s]*(?:SYMPTOMS|SIGNS|IF YOU HAVE|WHEN YOU)/i)) {
-        // Symptoms or conditions
-        sections.push({
-          type: 'symptoms',
-          content: trimmedLine.replace(/^\*+\s*/, '').replace(/\*+$/, ''),
-          icon: <Activity className="w-4 h-4" />,
-          color: 'text-orange-700',
-          bgColor: 'bg-orange-50',
-          borderColor: 'border-orange-200'
-        });
-      } else if (trimmedLine.match(/^[\*\s]*(?:WARNING|CAUTION|IMPORTANT|NOTE|REMEMBER)/i)) {
-        // Warnings or important notes
-        sections.push({
-          type: 'warning',
-          content: trimmedLine.replace(/^\*+\s*/, '').replace(/\*+$/, ''),
-          icon: <Shield className="w-4 h-4" />,
-          color: 'text-amber-700',
-          bgColor: 'bg-amber-50',
-          borderColor: 'border-amber-200'
-        });
-      } else if (trimmedLine.match(/^\*\s/)) {
-        // Bullet points/steps
-        const step = trimmedLine.replace(/^\*\s*/, '').replace(/\*+$/, '');
-        currentSteps.push(step);
-      } else {
+        continue;
+      }
+
+      // Check for main action items (STOP THE BLEEDING, CLEAN THE WOUND, etc.)
+      if (line.match(/^[A-Z\s]+:/)) {
         // Flush any accumulated steps
         if (currentSteps.length > 0) {
           sections.push({
-            type: 'steps',
-            content: currentSteps.join('|||'), // Use delimiter to separate steps
+            type: "steps",
+            content: currentSteps.join("|||"),
             icon: <CheckCircle className="w-4 h-4" />,
-            color: 'text-green-700',
-            bgColor: 'bg-green-50',
-            borderColor: 'border-green-200'
+            color: "text-green-700",
+            bgColor: "bg-green-50",
+            borderColor: "border-green-200",
           });
           currentSteps = [];
         }
 
-        // Regular informational text
-        sections.push({
-          type: 'info',
-          content: trimmedLine,
-          icon: <Info className="w-4 h-4" />,
-          color: 'text-slate-700',
-          bgColor: 'bg-slate-50',
-          borderColor: 'border-slate-200'
-        });
+        // Flush any accumulated advice items
+        if (currentAdviceItems.length > 0) {
+          sections.push({
+            type: "advice",
+            content: currentAdviceItems.join("|||"),
+            icon: <Stethoscope className="w-4 h-4" />,
+            color: "text-purple-700",
+            bgColor: "bg-purple-50",
+            borderColor: "border-purple-200",
+          });
+          currentAdviceItems = [];
+          isInSeeADoctorSection = false;
+        }
+
+        if (line.match(/^STOP THE BLEEDING:/i)) {
+          sections.push({
+            type: "emergency",
+            content: line,
+            icon: <AlertTriangle className="w-4 h-4" />,
+            color: "text-red-700",
+            bgColor: "bg-red-50",
+            borderColor: "border-red-200",
+          });
+        } else {
+          currentSteps.push(line);
+        }
+        continue;
+      }
+
+      // Check for "SEE A DOCTOR if:" section
+      if (line.match(/^SEE A DOCTOR if:/i)) {
+        // Flush any accumulated steps
+        if (currentSteps.length > 0) {
+          sections.push({
+            type: "steps",
+            content: currentSteps.join("|||"),
+            icon: <CheckCircle className="w-4 h-4" />,
+            color: "text-green-700",
+            bgColor: "bg-green-50",
+            borderColor: "border-green-200",
+          });
+          currentSteps = [];
+        }
+
+        isInSeeADoctorSection = true;
+        continue;
+      }
+
+      // Check for FAQ section
+      if (line.match(/^Some FAQs relevant/i)) {
+        // Flush any accumulated items
+        if (currentSteps.length > 0) {
+          sections.push({
+            type: "steps",
+            content: currentSteps.join("|||"),
+            icon: <CheckCircle className="w-4 h-4" />,
+            color: "text-green-700",
+            bgColor: "bg-green-50",
+            borderColor: "border-green-200",
+          });
+          currentSteps = [];
+        }
+        if (currentAdviceItems.length > 0) {
+          sections.push({
+            type: "advice",
+            content: currentAdviceItems.join("|||"),
+            icon: <Stethoscope className="w-4 h-4" />,
+            color: "text-purple-700",
+            bgColor: "bg-purple-50",
+            borderColor: "border-purple-200",
+          });
+          currentAdviceItems = [];
+        }
+
+        // Collect all FAQ lines
+        const faqLines: string[] = [];
+        for (let j = i + 1; j < lines.length; j++) {
+          const faqLine = lines[j].trim();
+          if (faqLine.match(/^\d+/) || faqLine.match(/^What|^How|^When/)) {
+            faqLines.push(faqLine);
+          }
+        }
+
+        if (faqLines.length > 0) {
+          sections.push({
+            type: "faqs",
+            content: faqLines.join("\n"),
+            icon: <Info className="w-4 h-4" />,
+            color: "text-slate-700",
+            bgColor: "bg-slate-50",
+            borderColor: "border-slate-200",
+          });
+        }
+        break; // Stop processing after FAQs
+      }
+
+      // Handle numbered lines or bullet points
+      if (line.match(/^\d+/) || line.match(/^[•\-\*]/)) {
+        const cleanLine = line
+          .replace(/^\d+\s*/, "")
+          .replace(/^[•\-\*]\s*/, "");
+
+        if (isInSeeADoctorSection) {
+          currentAdviceItems.push(cleanLine);
+        } else {
+          currentSteps.push(cleanLine);
+        }
+        continue;
+      }
+
+      // Handle regular content
+      if (isInSeeADoctorSection) {
+        currentAdviceItems.push(line);
+      } else if (line.length > 10) {
+        // Only add substantial content
+        currentSteps.push(line);
       }
     }
 
-    // Handle any remaining steps
+    // Flush any remaining items
     if (currentSteps.length > 0) {
       sections.push({
-        type: 'steps',
-        content: currentSteps.join('|||'),
+        type: "steps",
+        content: currentSteps.join("|||"),
         icon: <CheckCircle className="w-4 h-4" />,
-        color: 'text-green-700',
-        bgColor: 'bg-green-50',
-        borderColor: 'border-green-200'
+        color: "text-green-700",
+        bgColor: "bg-green-50",
+        borderColor: "border-green-200",
+      });
+    }
+
+    if (currentAdviceItems.length > 0) {
+      sections.push({
+        type: "advice",
+        content: currentAdviceItems.join("|||"),
+        icon: <Stethoscope className="w-4 h-4" />,
+        color: "text-purple-700",
+        bgColor: "bg-purple-50",
+        borderColor: "border-purple-200",
       });
     }
 
@@ -143,70 +227,224 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
   };
 
   const formatContent = (content: string, type: string) => {
-    // Remove emojis for display
-    let formatted = content.replace(/🚨|😕|🤔|🚑|🚿|🤲|💡|📍|🕒|⌄|❤️|🏥|💊|🩺|🔥|❄️|⚠️|✅|❌|🆘|📞|🎯/g, '');
-    
-    // Handle bold text (keep the formatting, remove asterisks)
-    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold">$1</strong>');
-    formatted = formatted.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
-    
-    // Add special formatting for medical terms
-    formatted = formatted.replace(/\b(emergency|urgent|important|warning|caution|danger|critical|immediately)\b/gi, 
-      '<span class="font-bold text-red-600 uppercase">$1</span>');
-    
-    // Handle steps if it's a steps section
-    if (type === 'steps') {
-      const steps = content.split('|||');
-      return steps.map((step, index) => (
-        <div key={index} className="flex items-start gap-2 mb-2 last:mb-0">
-          <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-bold text-green-700">{index + 1}</span>
-          </div>
-          <span 
-            className="text-sm leading-relaxed"
-            dangerouslySetInnerHTML={{ 
-              __html: step.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold">$1</strong>')
-                          .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>') 
-            }}
-          />
+    // Remove emojis for cleaner display
+    let formatted = content
+      .replace(
+        /🚨|😕|🤔|🚑|🚿|🤲|💡|📍|🕒|⌄|❤️|🏥|💊|🩺|🔥|❄️|⚠️|✅|❌|🆘|📞|🎯|😊|🤢|💉/g,
+        ""
+      )
+      .trim();
+
+    // Handle bold text
+    formatted = formatted.replace(
+      /\*\*(.*?)\*\*/g,
+      '<strong class="font-bold">$1</strong>'
+    );
+
+    // Handle steps/list items
+    if (type === "steps" || type === "advice") {
+      const items = content.split("|||");
+      return (
+        <div className="space-y-2">
+          {items.map((item, index) => {
+            const cleanItem = item
+              .replace(
+                /🚨|😕|🤔|🚑|🚿|🤲|💡|📍|🕒|⌄|❤️|🏥|💊|🩺|🔥|❄️|⚠️|✅|❌|🆘|📞|🎯|😊|🤢|💉/g,
+                ""
+              )
+              .trim();
+
+            const formattedItem = cleanItem.replace(
+              /\*\*(.*?)\*\*/g,
+              '<strong class="font-bold">$1</strong>'
+            );
+
+            const isMainAction = cleanItem.match(/^[A-Z\s]+:/);
+
+            return (
+              <div key={index} className="flex items-start gap-3">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    isMainAction
+                      ? type === "advice"
+                        ? "bg-purple-100"
+                        : "bg-green-100"
+                      : type === "advice"
+                      ? "bg-purple-50 border border-purple-200"
+                      : "bg-green-50 border border-green-200"
+                  }`}
+                >
+                  <span
+                    className={`text-xs font-bold ${
+                      type === "advice" ? "text-purple-700" : "text-green-700"
+                    }`}
+                  >
+                    {isMainAction ? "!" : index + 1}
+                  </span>
+                </div>
+                <div
+                  className="text-sm leading-relaxed flex-1"
+                  dangerouslySetInnerHTML={{ __html: formattedItem }}
+                />
+              </div>
+            );
+          })}
         </div>
-      ));
+      );
     }
 
     return (
-      <span 
+      <span
         className="text-sm leading-relaxed"
         dangerouslySetInnerHTML={{ __html: formatted }}
       />
     );
   };
 
+  // Parse sections
   const sections = parseAndFormatMessage(text);
 
+  // Split into non-FAQ and FAQ sections
+  const nonFaqSections = sections.filter((section) => section.type !== "faqs");
+  const faqSections = sections.filter((section) => section.type === "faqs");
+
   return (
-    <div className={`space-y-3 ${className}`}>
-      {sections.map((section, index) => (
-        <div
-          key={index}
-          className={`rounded-lg border-l-4 p-3 ${section.bgColor} ${section.borderColor} shadow-sm`}
-        >
-          <div className="flex items-start gap-2">
-            <div className={`${section.color} flex-shrink-0 mt-0.5`}>
-              {section.icon}
-            </div>
-            <div className="flex-1">
-              {section.type === 'header' && (
-                <div className={`font-semibold mb-1 ${section.color}`}>
-                  DOCai Medical Assistant
-                </div>
-              )}
-              <div className={section.color}>
-                {formatContent(section.content, section.type)}
-              </div>
-            </div>
+    <div className={`space-y-8 ${className}`}>
+      {/* First Aid Steps */}
+      {nonFaqSections.length > 0 && (
+        <div>
+          <div className="text-lg font-bold mb-4 text-blue-900">
+            First Aid Steps
+          </div>
+          <div className="space-y-4">
+            {nonFaqSections.map((section, index) => {
+              switch (section.type) {
+                case "header":
+                  return (
+                    <div
+                      key={index}
+                      className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`${section.color} flex-shrink-0 mt-0.5`}
+                        >
+                          {section.icon}
+                        </div>
+                        <div className="flex-1">
+                          <div
+                            className={`font-semibold mb-2 ${section.color}`}
+                          >
+                            DOCai Medical Assistant
+                          </div>
+                          <div className={section.color}>
+                            {formatContent(section.content, section.type)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                case "emergency":
+                  return (
+                    <div
+                      key={index}
+                      className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`${section.color} flex-shrink-0 mt-0.5`}
+                        >
+                          {section.icon}
+                        </div>
+                        <div className="flex-1">
+                          <div
+                            className={`font-semibold mb-2 ${section.color}`}
+                          >
+                            Immediate Action Required
+                          </div>
+                          <div className={section.color}>
+                            {formatContent(section.content, section.type)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                case "steps":
+                  return (
+                    <div
+                      key={index}
+                      className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`${section.color} flex-shrink-0 mt-0.5`}
+                        >
+                          {section.icon}
+                        </div>
+                        <div className="flex-1">
+                          <div
+                            className={`font-semibold mb-3 ${section.color}`}
+                          >
+                            First Aid Steps
+                          </div>
+                          <div className={section.color}>
+                            {formatContent(section.content, section.type)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                case "advice":
+                  return (
+                    <div
+                      key={index}
+                      className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`${section.color} flex-shrink-0 mt-0.5`}
+                        >
+                          {section.icon}
+                        </div>
+                        <div className="flex-1">
+                          <div
+                            className={`font-semibold mb-3 ${section.color}`}
+                          >
+                            When to See a Doctor
+                          </div>
+                          <div className={section.color}>
+                            {formatContent(section.content, section.type)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                default:
+                  return null;
+              }
+            })}
           </div>
         </div>
-      ))}
+      )}
+
+      {/* FAQs */}
+      {faqSections.length > 0 && (
+        <div>
+          <div className="text-lg font-bold mb-4 text-blue-900">
+            Frequently Asked Questions
+          </div>
+          <div className="space-y-4">
+            {faqSections.map((section, index) => (
+              <FAQ
+                key={index}
+                rawText={section.content}
+                defaultOpen={false}
+                className="mt-4"
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

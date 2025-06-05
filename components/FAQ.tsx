@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, HelpCircle, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 
 interface FAQItem {
   question: string;
@@ -12,40 +19,127 @@ interface FAQItem {
 }
 
 interface FAQProps {
-  faqs: FAQItem[];
+  faqs?: FAQItem[];
+  rawText?: string; // For dynamic parsing
   className?: string;
   isProcessingFAQs?: boolean;
   onFAQProcess?: (index: number) => Promise<void>;
+  defaultOpen?: boolean;
 }
 
-export const FAQ: React.FC<FAQProps> = ({ 
-  faqs, 
+// Enhanced FAQ parsing function
+function parseFAQs(text: string): FAQItem[] {
+  const faqs: FAQItem[] = [];
+
+  // Multiple patterns to detect FAQs
+  const patterns = [
+    // Pattern: * Question? emoji \n answer
+    /\*\s*(.+?\?)\s*[🚒💉🏥🤔❓🩹🚑🆘🔥💊🩺⚠️ℹ️]?\s*\n((?:(?!\*\s*.+?\?).+(?:\n|$))*)/g,
+    // Pattern: Q: Question? A: Answer
+    /Q\d*[:.]?\s*(.+?\?)\s*A\d*[:.]?\s*([^Q]+?)(?=Q\d*[:.]|$)/gi,
+    // Pattern: **Question?** Answer
+    /\*\*(.+?\?)\*\*\s*\n([^*]+?)(?=\*\*|$)/g,
+    // Pattern: Question on one line, answer on next lines
+    /^(.+\?)\s*$\n((?:(?!^.+\?$).+(?:\n|$))*)/gm,
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const question = cleanFAQText(match[1]);
+      const answer = cleanFAQText(match[2]);
+
+      if (question && answer && question.length > 5 && answer.length > 5) {
+        // Check for duplicates
+        const isDuplicate = faqs.some(
+          (faq) =>
+            faq.question.toLowerCase().includes(question.toLowerCase()) ||
+            question.toLowerCase().includes(faq.question.toLowerCase())
+        );
+
+        if (!isDuplicate) {
+          faqs.push({
+            question,
+            answer,
+            isProcessed: true,
+          });
+        }
+      }
+    }
+  }
+
+  return faqs;
+}
+
+function cleanFAQText(text: string): string {
+  return text
+    .replace(/[🚒💉🏥🤔❓🩹🚑🆘🔥💊🩺⚠️ℹ️]/g, "") // Remove emojis
+    .replace(/^\s*[\*\-\+\t]\s*/, "") // Remove bullet points
+    .replace(/^Q\d*[:.]?\s*/i, "") // Remove Q: prefix
+    .replace(/^A\d*[:.]?\s*/i, "") // Remove A: prefix
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .trim();
+}
+
+export const FAQ: React.FC<FAQProps> = ({
+  faqs: propFaqs,
+  rawText,
   className = "",
   isProcessingFAQs = false,
-  onFAQProcess
+  onFAQProcess,
+  defaultOpen = false,
 }) => {
-  // Initialize with all items closed by default
+  // Parse FAQs from raw text if provided, otherwise use prop FAQs
+  const [parsedFaqs, setParsedFaqs] = useState<FAQItem[]>([]);
   const [openItems, setOpenItems] = useState<Set<number>>(new Set());
-  const [processingItems, setProcessingItems] = useState<Set<number>>(new Set());
+  const [processingItems, setProcessingItems] = useState<Set<number>>(
+    new Set()
+  );
+
+  // Parse FAQs from raw text when component mounts or text changes
+  useEffect(() => {
+    if (rawText) {
+      const parsed = parseFAQs(rawText);
+      setParsedFaqs(parsed);
+
+      // Auto-open first FAQ if defaultOpen is true
+      if (defaultOpen && parsed.length > 0) {
+        setOpenItems(new Set([0]));
+      }
+    } else if (propFaqs) {
+      setParsedFaqs(propFaqs);
+
+      if (defaultOpen && propFaqs.length > 0) {
+        setOpenItems(new Set([0]));
+      }
+    }
+  }, [rawText, propFaqs, defaultOpen]);
+
+  const finalFaqs = parsedFaqs.length > 0 ? parsedFaqs : propFaqs || [];
 
   const toggleItem = async (index: number) => {
     const newOpenItems = new Set(openItems);
-    
+
     if (newOpenItems.has(index)) {
       newOpenItems.delete(index);
     } else {
       newOpenItems.add(index);
-      
+
       // If FAQ item needs processing and has onFAQProcess callback
-      const faqItem = faqs[index];
-      if (onFAQProcess && !faqItem.isProcessed && !faqItem.isLoading && !processingItems.has(index)) {
-        setProcessingItems(prev => new Set(prev).add(index));
+      const faqItem = finalFaqs[index];
+      if (
+        onFAQProcess &&
+        !faqItem.isProcessed &&
+        !faqItem.isLoading &&
+        !processingItems.has(index)
+      ) {
+        setProcessingItems((prev) => new Set(prev).add(index));
         try {
           await onFAQProcess(index);
         } catch (error) {
-          console.error('FAQ processing error:', error);
+          console.error("FAQ processing error:", error);
         } finally {
-          setProcessingItems(prev => {
+          setProcessingItems((prev) => {
             const newSet = new Set(prev);
             newSet.delete(index);
             return newSet;
@@ -53,32 +147,36 @@ export const FAQ: React.FC<FAQProps> = ({
         }
       }
     }
-    
+
     setOpenItems(newOpenItems);
   };
 
   const toggleAll = () => {
-    if (openItems.size === faqs.length) {
+    if (openItems.size === finalFaqs.length) {
       setOpenItems(new Set());
     } else {
-      setOpenItems(new Set(faqs.map((_, index) => index)));
+      setOpenItems(new Set(finalFaqs.map((_, index) => index)));
     }
   };
 
-  if (faqs.length === 0) return null;
+  if (finalFaqs.length === 0) return null;
 
   return (
-    <div className={`mt-4 ${className}`}>
+    <div
+      className={`border-l-4 border-purple-500 bg-purple-50 p-4 rounded-lg shadow-sm ${className}`}
+    >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-          <HelpCircle className="w-4 h-4" />
-          Frequently Asked Questions
+        <h3 className="text-sm font-bold text-purple-800 flex items-center gap-2">
+          <HelpCircle className="w-4 h-4" />❓ Frequently Asked Questions
+          <span className="text-xs bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full">
+            {finalFaqs.length}
+          </span>
         </h3>
         <button
           onClick={toggleAll}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+          className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1 bg-purple-100 hover:bg-purple-200 px-2 py-1 rounded transition-colors"
         >
-          {openItems.size === faqs.length ? (
+          {openItems.size === finalFaqs.length ? (
             <>
               <ChevronUp className="w-3 h-3" />
               Collapse All
@@ -91,40 +189,43 @@ export const FAQ: React.FC<FAQProps> = ({
           )}
         </button>
       </div>
-        <div className="space-y-2">
-        {faqs.map((faq, index) => {
+
+      <div className="space-y-2">
+        {finalFaqs.map((faq, index) => {
           const isItemLoading = faq.isLoading || processingItems.has(index);
           const isItemProcessed = faq.isProcessed;
           const hasError = faq.processingError;
-          
+
           return (
             <div
               key={index}
-              className={`border rounded-lg overflow-hidden transition-all duration-200 ${
-                openItems.has(index) 
-                  ? 'border-blue-300 bg-blue-50 shadow-sm' 
-                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+              className={`border rounded-lg overflow-hidden transition-all duration-200 bg-white shadow-sm ${
+                openItems.has(index)
+                  ? "border-purple-300 shadow-md"
+                  : "border-purple-200 hover:border-purple-300"
               }`}
             >
               <button
                 onClick={() => toggleItem(index)}
                 disabled={isItemLoading}
-                className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-slate-100 transition-colors duration-200 group disabled:opacity-50"
+                className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-purple-50 transition-colors duration-200 group disabled:opacity-50"
               >
-                <span className="text-sm font-medium text-slate-800 pr-2 group-hover:text-blue-700 flex items-center gap-2">
-                  <span className="text-blue-600 mr-1">Q{index + 1}:</span>
+                <span className="text-sm font-medium text-slate-800 pr-2 group-hover:text-purple-700 flex items-center gap-2">
+                  <span className="text-purple-600 font-bold">
+                    Q{index + 1}:
+                  </span>
                   {faq.question}
-                  
+
                   {/* Loading indicator */}
                   {isItemLoading && (
-                    <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                    <Loader2 className="w-3 h-3 animate-spin text-purple-500" />
                   )}
-                  
+
                   {/* Processed indicator */}
                   {isItemProcessed && !isItemLoading && (
                     <CheckCircle className="w-3 h-3 text-green-600" />
                   )}
-                  
+
                   {/* Error indicator */}
                   {hasError && !isItemLoading && (
                     <AlertCircle className="w-3 h-3 text-red-600" />
@@ -132,29 +233,24 @@ export const FAQ: React.FC<FAQProps> = ({
                 </span>
                 <div className="flex-shrink-0">
                   {openItems.has(index) ? (
-                    <ChevronUp className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
+                    <ChevronUp className="w-4 h-4 text-slate-500 group-hover:text-purple-600" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
+                    <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-purple-600" />
                   )}
                 </div>
               </button>
-                <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  openItems.has(index) 
-                    ? 'max-h-96 opacity-100' 
-                    : 'max-h-0 opacity-0'
-                }`}
-              >
-                <div className="px-4 pb-3 border-t border-blue-200 bg-white">
+
+              {openItems.has(index) && (
+                <div className="px-4 pb-3 border-t border-purple-200 bg-purple-25">
                   <div className="text-sm text-slate-700 leading-relaxed pt-3">
                     <div className="flex items-start gap-2">
-                      <span className="text-blue-600 font-semibold flex-shrink-0">
+                      <span className="text-purple-600 font-bold flex-shrink-0">
                         A:
                       </span>
                       <div className="flex-1">
                         {isItemLoading ? (
                           <div className="flex items-center gap-2 py-4">
-                            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                            <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
                             <span className="text-slate-500 italic">
                               Processing detailed answer...
                             </span>
@@ -167,52 +263,62 @@ export const FAQ: React.FC<FAQProps> = ({
                             </span>
                           </div>
                         ) : (
-                          faq.answer.split('\n').map((line, lineIndex) => (
-                            <div 
-                              key={lineIndex} 
-                              className={`mb-1 transition-all duration-300 ease-in-out delay-${Math.min(lineIndex * 50, 300)} ${
-                                openItems.has(index) 
-                                  ? 'translate-y-0 opacity-100' 
-                                  : 'translate-y-2 opacity-0'
-                              }`}
-                            >
-                              {line.trim() && (
-                                <span
-                                  dangerouslySetInnerHTML={{
-                                    __html: line
-                                      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-800">$1</strong>')
-                                      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-                                      .replace(/ONLY USE A TOURNIQUET IF/g, '<strong class="text-red-600 font-bold">ONLY USE A TOURNIQUET IF</strong>')
-                                      .replace(/DO NOT USE WATER OR SOAP/g, '<strong class="text-red-600 font-bold">DO NOT USE WATER OR SOAP</strong>')
-                                  }}
-                                />
-                              )}
-                            </div>
-                          ))
+                          <div
+                            className="prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{
+                              __html: formatFAQAnswer(faq.answer),
+                            }}
+                          />
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
       </div>
-        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center gap-2 text-xs text-blue-700">
-          <HelpCircle className="w-3 h-3" />
-          <span className="font-medium">
-            {isProcessingFAQs 
-              ? "Processing FAQ responses..." 
-              : "Click any question to expand the answer"
-            }
-          </span>
-          {isProcessingFAQs && (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          )}
-        </div>
+
+      <div className="mt-3 text-xs text-purple-600 flex items-center gap-2">
+        <HelpCircle className="w-3 h-3" />
+        <span>
+          {isProcessingFAQs
+            ? "Processing FAQ responses..."
+            : `${finalFaqs.length} questions available - click to expand answers`}
+        </span>
+        {isProcessingFAQs && <Loader2 className="w-3 h-3 animate-spin" />}
       </div>
     </div>
   );
 };
+
+// Enhanced answer formatting
+function formatFAQAnswer(answer: string): string {
+  return (
+    answer
+      .replace(
+        /\*\*(.*?)\*\*/g,
+        '<strong class="font-semibold text-slate-800">$1</strong>'
+      )
+      .replace(/\*(.*?)\*/g, '<em class="italic text-slate-600">$1</em>')
+      .replace(/\n\n/g, '</p><p class="mt-2">')
+      .replace(/\n/g, "<br/>")
+      .replace(/^/, "<p>")
+      .replace(/$/, "</p>")
+      // Highlight important medical terms
+      .replace(
+        /\b(emergency|urgent|important|warning|caution|danger|critical|immediately)\b/gi,
+        '<span class="font-bold text-red-600 bg-red-100 px-1 rounded">$1</span>'
+      )
+      .replace(
+        /\b(call|phone|contact)\s*(108|911|999|\d{3})\b/gi,
+        '<span class="font-bold text-red-600 bg-red-100 px-1 rounded">📞 $1 $2</span>'
+      )
+      // Highlight medical procedures
+      .replace(
+        /\b(apply pressure|elevate|bandage|compress|tourniquet)\b/gi,
+        '<span class="font-medium text-blue-700 bg-blue-100 px-1 rounded">$1</span>'
+      )
+  );
+}
