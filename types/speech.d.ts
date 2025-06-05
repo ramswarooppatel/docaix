@@ -1,4 +1,5 @@
 interface SpeechRecognition extends EventTarget {
+  grammars: undefined;
   continuous: boolean;
   interimResults: boolean;
   lang: string;
