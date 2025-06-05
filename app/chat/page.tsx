@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import VoiceInput from "@/components/VoiceInput";
+import VoiceWaveAnimation from "@/components/VoiceWaveAnimation";
 
 interface ChatMessage {
   id: number;
@@ -36,6 +37,7 @@ const chat_page = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVoiceListening, setIsVoiceListening] = useState(false); // Add this state
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -165,6 +167,10 @@ const chat_page = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVoiceListeningChange = (listening: boolean) => {
+    setIsVoiceListening(listening);
   };
 
   return (
@@ -331,27 +337,47 @@ const chat_page = () => {
 
           {/* Chat Input */}
           <div className="flex w-full items-end gap-2">
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 relative">
               <Input
                 ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Describe your emergency..."
-                className="w-full h-10 sm:h-12 pl-3 sm:pl-4 pr-3 sm:pr-4 rounded-lg sm:rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm text-sm sm:text-base bg-white resize-none"
+                placeholder={isVoiceListening ? "🎤 Listening..." : "Describe your emergency..."}
+                className={`w-full h-10 sm:h-12 pl-3 sm:pl-4 pr-3 sm:pr-4 rounded-lg sm:rounded-xl border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm text-sm sm:text-base bg-white resize-none transition-all duration-200 ${
+                  isVoiceListening 
+                    ? "border-red-300 bg-red-50/50 ring-2 ring-red-200" 
+                    : ""
+                }`}
                 onKeyDown={(e) =>
                   e.key === "Enter" && !isLoading && handleSend()
                 }
-                disabled={isLoading}
+                disabled={isLoading || isVoiceListening}
               />
+              
+              {/* Voice Wave Animation - Centered */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <VoiceWaveAnimation isActive={isVoiceListening} />
+              </div>
+              
+              {/* Voice Status with Timer */}
+              {isVoiceListening && (
+                <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-3 py-1 rounded-full flex items-center gap-2 shadow-lg animate-bounce">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  <span>Recording</span>
+                </div>
+              )}
             </div>
 
-            <VoiceInput onVoiceCommand={handleVoiceCommand} />
+            <VoiceInput 
+              onVoiceCommand={handleVoiceCommand} 
+              onListeningChange={handleVoiceListeningChange}
+            />
 
             <Button
               type="button"
               onClick={handleSend}
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !input.trim() || isVoiceListening}
               size="sm"
               className="h-10 sm:h-12 px-3 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
@@ -369,8 +395,7 @@ const chat_page = () => {
           {/* Emergency Warning - Smaller */}
           <div className="text-center">
             <p className="text-xs text-slate-500 px-1">
-              🚨 For life-threatening emergencies, use the red "Call 108" button
-              above
+              🚨 For life-threatening emergencies, use the red "Call 108" button above
             </p>
           </div>
         </div>
