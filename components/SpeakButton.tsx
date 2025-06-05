@@ -29,8 +29,8 @@ const SpeakButton: React.FC<SpeakButtonProps> = ({
     pause, 
     resume 
   } = useTextToSpeech({
-    rate: voiceSettings.rate,
-    pitch: voiceSettings.pitch,
+    rate: voiceSettings.speed,
+    pitch: 1.2, // Default pitch value since it's not in voiceSettings
     volume: voiceSettings.volume
   });
 
