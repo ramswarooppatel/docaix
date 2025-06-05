@@ -26,8 +26,9 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
   const [location, setLocation] = useState<string>("Getting location...");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [userCoordinates, setUserCoordinates] = useState<{lat: number; lng: number} | null>(null);
 
-  // Get user's current location
+  // Get user's current location with coordinates
   const getCurrentLocation = async (): Promise<string> => {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
@@ -39,22 +40,16 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
+          
+          // Store coordinates for hospital search
+          setUserCoordinates({ lat: latitude, lng: longitude });
+          
           try {
-            // Try to get address from coordinates (reverse geocoding)
-            const response = await fetch(
-              `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_API_KEY`
-            );
-            if (response.ok) {
-              const data = await response.json();
-              const address =
-                data.results[0]?.formatted ||
-                `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-              setIsGettingLocation(false);
-              resolve(address);
-            } else {
-              setIsGettingLocation(false);
-              resolve(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-            }
+            // Try to get address from coordinates using a reverse geocoding service
+            // You can replace this with your preferred geocoding service
+            const locationString = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            setIsGettingLocation(false);
+            resolve(locationString);
           } catch (error) {
             setIsGettingLocation(false);
             resolve(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
@@ -62,9 +57,10 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
         },
         (error) => {
           setIsGettingLocation(false);
+          console.error("Geolocation error:", error);
           resolve("Location access denied");
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
       );
     });
   };
@@ -103,6 +99,7 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('emergencyContactsUpdated', handleContactsUpdate);
 
+    // Get location on component mount
     getCurrentLocation().then(setLocation);
 
     return () => {
@@ -121,9 +118,57 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
     window.location.href = "tel:112";
   };
 
-  // Open hospitals in settings page
-  const findNearbyHospitals = () => {
-    window.location.href = "/settings?tab=hospitals";
+  // Open hospitals with user's real location - now uses the new hospital finder
+  const findNearbyHospitals = async () => {
+    try {
+      let coordinates = userCoordinates;
+      
+      // If we don't have coordinates yet, get them now
+      if (!coordinates) {
+        setIsGettingLocation(true);
+        await getCurrentLocation();
+        coordinates = userCoordinates;
+        setIsGettingLocation(false);
+      }
+
+      if (coordinates) {
+        // Build Google Maps URL with user's real coordinates
+        const { lat, lng } = coordinates;
+        
+        // Try to use our improved hospital search first
+        try {
+          const response = await fetch(`/api/nearby-hospitals?lat=${lat}&lng=${lng}&radius=10000`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.results && data.results.length > 0) {
+              // Open Google Maps with the nearest hospital
+              const nearestHospital = data.results[0];
+              const hospitalMapsURL = `https://www.google.com/maps/dir/${lat},${lng}/${nearestHospital.geometry.location.lat},${nearestHospital.geometry.location.lng}`;
+              console.log(`Opening directions to nearest hospital: ${nearestHospital.name}`);
+              window.open(hospitalMapsURL, "_blank");
+              return;
+            }
+          }
+        } catch (error) {
+          console.log("Hospital search API failed, falling back to generic search");
+        }
+        
+        // Fallback to generic hospital search
+        const googleMapsURL = `https://www.google.com/maps/search/hospitals+near+me/@${lat},${lng},15z/data=!3m1!4b1?entry=ttu&g_ep=EgoyMDI1MDYwMy4wIKXMDSoASAFQAw%3D%3D`;
+        console.log(`Opening hospitals near: ${lat}, ${lng}`);
+        window.open(googleMapsURL, "_blank");
+      } else {
+        // Fallback to generic search if location is not available
+        console.log("Location not available, using fallback URL");
+        const fallbackURL = "https://maps.app.goo.gl/NHbFRyMVtQGV1DbM7";
+        window.open(fallbackURL, "_blank");
+      }
+    } catch (error) {
+      console.error("Error getting location for hospital search:", error);
+      // Use fallback URL
+      const fallbackURL = "https://maps.app.goo.gl/NHbFRyMVtQGV1DbM7";
+      window.open(fallbackURL, "_blank");
+    }
   };
 
   // Send emergency message to all saved contacts
@@ -149,11 +194,18 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
     const currentLocation = await getCurrentLocation();
     setLocation(currentLocation);
 
+    // Include coordinates in emergency message if available
+    let locationInfo = currentLocation;
+    if (userCoordinates) {
+      const { lat, lng } = userCoordinates;
+      locationInfo = `${currentLocation}\n📍 GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}\n🗺️ Maps: https://www.google.com/maps?q=${lat},${lng}`;
+    }
+
     const emergencyMessage = `🚨 EMERGENCY ALERT 🚨
     
 I need immediate help! This is an automated emergency message from DOCai Medical Assistant.
 
-📍 My current location: ${currentLocation}
+📍 My current location: ${locationInfo}
 
 🕒 Time: ${new Date().toLocaleString()}
 
@@ -175,17 +227,17 @@ This message was sent automatically through the DOCai Emergency System.`;
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Emergency Buttons - Four buttons in a row */}
-      <div className="grid grid-cols-4 gap-1 sm:gap-2 mb-2">
+      {/* Emergency Buttons - Mobile optimized grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-2 mb-2">
         {/* Call 108 Button */}
         <Button
           onClick={callEmergencyServices108}
           size="sm"
           suppressHydrationWarning={true}
-          className="w-full h-8 sm:h-9 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1 text-xs"
+          className="w-full h-7 sm:h-8 lg:h-9 bg-red-600 hover:bg-red-700 text-white rounded-md sm:rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1 text-xs"
         >
-          <Phone className="w-3 h-3" />
-          <span className="hidden sm:inline">Call</span>
+          <Phone className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+          <span className="hidden xs:inline sm:hidden lg:inline">Call</span>
           <span>108</span>
         </Button>
 
@@ -194,23 +246,31 @@ This message was sent automatically through the DOCai Emergency System.`;
           onClick={callEmergencyServices112}
           size="sm"
           suppressHydrationWarning={true}
-          className="w-full h-8 sm:h-9 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1 text-xs"
+          className="w-full h-7 sm:h-8 lg:h-9 bg-red-500 hover:bg-red-600 text-white rounded-md sm:rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1 text-xs"
         >
-          <Phone className="w-3 h-3" />
-          <span className="hidden sm:inline">Call</span>
+          <Phone className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+          <span className="hidden xs:inline sm:hidden lg:inline">Call</span>
           <span>112</span>
         </Button>
 
-        {/* Find Hospitals Button */}
+        {/* Find Hospitals Button - Now uses real user location */}
         <Button
           onClick={findNearbyHospitals}
+          disabled={isGettingLocation}
           size="sm"
           suppressHydrationWarning={true}
-          className="w-full h-8 sm:h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1 text-xs"
+          className="w-full h-7 sm:h-8 lg:h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-md sm:rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1 text-xs disabled:opacity-50"
+          title={userCoordinates ? `Find hospitals near ${userCoordinates.lat.toFixed(4)}, ${userCoordinates.lng.toFixed(4)}` : "Find nearby hospitals"}
         >
-          <MapPin className="w-3 h-3" />
-          <span className="hidden sm:inline">Find</span>
-          <span className="sm:hidden">🏥</span>
+          {isGettingLocation ? (
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <>
+              <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              <span className="hidden xs:inline sm:hidden lg:inline">Hospitals</span>
+              <span className="xs:hidden sm:inline lg:hidden">🏥</span>
+            </>
+          )}
         </Button>
 
         {/* Emergency Message Button */}
@@ -219,17 +279,17 @@ This message was sent automatically through the DOCai Emergency System.`;
           disabled={isGettingLocation}
           size="sm"
           suppressHydrationWarning={true}
-          className="w-full h-8 sm:h-9 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1 disabled:opacity-50 text-xs"
+          className="w-full h-7 sm:h-8 lg:h-9 bg-orange-600 hover:bg-orange-700 text-white rounded-md sm:rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1 disabled:opacity-50 text-xs"
         >
           {isGettingLocation ? (
-            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
             <>
-              <MessageSquare className="w-3 h-3" />
-              <span className="hidden sm:inline">Alert</span>
-              <span className="sm:hidden">SOS</span>
+              <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              <span className="hidden xs:inline sm:hidden lg:inline">Alert</span>
+              <span className="xs:hidden sm:inline lg:hidden">SOS</span>
               {emergencyContacts.length > 0 && (
-                <span className="hidden sm:inline text-xs opacity-75">
+                <span className="hidden lg:inline text-xs opacity-75">
                   ({emergencyContacts.length})
                 </span>
               )}
@@ -238,10 +298,18 @@ This message was sent automatically through the DOCai Emergency System.`;
         </Button>
       </div>
 
+      {/* Location Display - Mobile optimized */}
+      {userCoordinates && (
+        <div className="text-center text-xs text-slate-500 mt-1 truncate">
+          📍 {userCoordinates.lat.toFixed(3)}, {userCoordinates.lng.toFixed(3)}
+        </div>
+      )}
+
       {/* Show contact count or prompt to add contacts */}
       {emergencyContacts.length === 0 && (
-        <div className="text-center text-xs text-slate-500 mt-1">
-          Add emergency contacts in Settings to enable SOS alerts
+        <div className="text-center text-xs text-slate-500 mt-1 px-2">
+          <span className="hidden sm:inline">Add emergency contacts in Settings to enable SOS alerts</span>
+          <span className="sm:hidden">Add contacts in Settings for SOS</span>
         </div>
       )}
     </div>

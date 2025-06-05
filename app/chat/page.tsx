@@ -49,6 +49,7 @@ const chat_page = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
+  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,6 +61,25 @@ const chat_page = () => {
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // Get user location on page load
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          console.log('Chat page has access to user location for enhanced responses');
+        },
+        (error) => {
+          console.log('Location access not available for chat');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -82,6 +102,27 @@ const chat_page = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const processLocationAwareMessage = (message: string) => {
+    // Check if the message is about finding hospitals or medical help
+    const hospitalKeywords = [
+      'hospital', 'emergency room', 'medical center', 'clinic',
+      'find hospitals', 'hospitals near me', 'nearest hospital',
+      'medical help', 'emergency medical', 'urgent care'
+    ];
+    
+    const isHospitalQuery = hospitalKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    if (isHospitalQuery && userLocation) {
+      // Enhance the message with location context
+      const enhancedMessage = `${message}\n\n[Note: User is located at coordinates ${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)} - please provide location-specific hospital recommendations if possible]`;
+      return enhancedMessage;
+    }
+    
+    return message;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -98,6 +139,9 @@ const chat_page = () => {
     setIsLoading(true);
 
     try {
+      // Process the message for location awareness
+      const processedMessage = processLocationAwareMessage(currentInput);
+      
       const res = await fetch(
         "https://firstaid-chat-bot-api.onrender.com/chat",
         {
@@ -106,8 +150,12 @@ const chat_page = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            message: currentInput,
+            message: processedMessage,
             session_id: sessionId || undefined,
+            user_location: userLocation ? {
+              lat: userLocation.lat,
+              lng: userLocation.lng
+            } : null
           }),
         }
       );
@@ -162,6 +210,9 @@ const chat_page = () => {
     setIsLoading(true);
 
     try {
+      // Process the voice command for location awareness
+      const processedCommand = processLocationAwareMessage(command);
+      
       const res = await fetch(
         "https://firstaid-chat-bot-api.onrender.com/chat",
         {
@@ -170,8 +221,13 @@ const chat_page = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            message: command,
+            message: processedCommand,
             session_id: sessionId || undefined,
+            user_location: userLocation ? {
+              lat: userLocation.lat,
+              lng: userLocation.lng
+            } : null,
+            is_voice_input: true
           }),
         }
       );
@@ -214,63 +270,70 @@ const chat_page = () => {
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
+      {/* Header - Mobile optimized */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur-lg border-b border-slate-200/60 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 z-10 shadow-sm">
         <div className="w-full max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 min-w-0 flex-1">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="p-2">
-                <ArrowLeft className="w-4 h-4" />
+              <Button variant="ghost" size="sm" className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9">
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </Link>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <Brain className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+            <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <Brain className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 text-white" />
             </div>
-            <div className="min-w-0">
-              <h1 className="font-bold text-sm sm:text-xl text-slate-800 truncate">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-bold text-xs sm:text-sm lg:text-xl text-slate-800 truncate">
                 DOCai Assistant
+                {userLocation && (
+                  <span className="hidden sm:inline text-xs text-green-600 ml-2">📍 Location Active</span>
+                )}
               </h1>
-              <p className="text-xs text-slate-600 hidden sm:block">Emergency Medical Support</p>
+              {userLocation && (
+                <p className="text-xs text-green-600 sm:hidden">📍 Location Active</p>
+              )}
+              <p className="text-xs text-slate-600 hidden lg:block">Emergency Medical Support</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link href="/settings">
-              <Button variant="ghost" size="sm" className="p-2">
-                <Settings className="w-4 h-4" />
+              <Button variant="ghost" size="sm" className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9">
+                <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </Link>
-            <SignalIndicators className="scale-75 sm:scale-100" />
+            <SignalIndicators className="scale-75 sm:scale-90 lg:scale-100" />
           </div>
         </div>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4">
-        <div className="w-full max-w-4xl mx-auto space-y-4">
+      {/* Chat Messages - Mobile optimized */}
+      <div className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+        <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center py-8 sm:py-16">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Sparkles className="text-white w-6 h-6 sm:w-8 sm:h-8" />
+            <div className="text-center py-6 sm:py-12 lg:py-16 px-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+                <Sparkles className="text-white w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-800 mb-2">
                 Welcome to DOCai
               </h2>
-              <p className="text-base sm:text-lg font-medium mb-2">
+              <p className="text-sm sm:text-base lg:text-lg font-medium mb-2">
                 Your AI Medical Assistant
+                {userLocation && <span className="block text-xs sm:text-sm text-green-600 mt-1">📍 Location-aware assistance enabled</span>}
               </p>
-              <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 max-w-xs sm:max-w-md mx-auto leading-relaxed">
                 I'm here to provide first aid guidance and emergency assistance.
                 For immediate emergencies, use the emergency buttons below to call 108 or
                 alert your contacts.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 max-w-lg mx-auto text-xs">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
-                  <Heart className="w-4 h-4 mx-auto mb-1" />
-                  <div className="font-semibold">Emergency Care</div>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-4 sm:mt-6 max-w-xs sm:max-w-lg mx-auto text-xs">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 sm:p-3 text-red-700">
+                  <Heart className="w-3 h-3 sm:w-4 sm:h-4 mx-auto mb-1" />
+                  <div className="font-semibold text-xs">Emergency Care</div>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700">
-                  <Stethoscope className="w-4 h-4 mx-auto mb-1" />
-                  <div className="font-semibold">First Aid Guide</div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 text-blue-700">
+                  <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4 mx-auto mb-1" />
+                  <div className="font-semibold text-xs">First Aid Guide</div>
                 </div>
               </div>
             </div>
@@ -279,27 +342,27 @@ const chat_page = () => {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex items-start gap-2 sm:gap-4 w-full ${
+                  className={`flex items-start gap-1.5 sm:gap-2 lg:gap-4 w-full ${
                     msg.sender === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
                   {/* Avatar */}
                   {msg.sender === "bot" && (
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                      <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                      <Bot className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                     </div>
                   )}
 
                   {/* Message Content */}
                   <div
-                    className={`max-w-[90%] sm:max-w-[80%] rounded-2xl shadow-sm ${
+                    className={`max-w-[85%] sm:max-w-[80%] lg:max-w-[75%] rounded-xl sm:rounded-2xl shadow-sm ${
                       msg.sender === "user"
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ml-auto px-4 py-3"
-                        : "bg-white text-slate-800 border border-slate-200 p-4"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ml-auto px-3 py-2 sm:px-4 sm:py-3"
+                        : "bg-white text-slate-800 border border-slate-200 p-3 sm:p-4"
                     }`}
                   >
                     {msg.sender === "user" ? (
-                      <div className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                      <div className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap">
                         {msg.text}
                       </div>
                     ) : (
@@ -308,12 +371,12 @@ const chat_page = () => {
 
                     {/* FAQs Section */}
                     {msg.sender === "bot" && msg.faqs && msg.faqs.length > 0 && (
-                      <FAQ faqs={msg.faqs} className="mt-4" />
+                      <FAQ faqs={msg.faqs} className="mt-3 sm:mt-4" />
                     )}
 
                     {/* Timestamp */}
                     <div
-                      className={`text-xs mt-3 ${
+                      className={`text-xs mt-2 sm:mt-3 ${
                         msg.sender === "user"
                           ? "text-blue-100"
                           : "text-slate-500"
@@ -327,19 +390,20 @@ const chat_page = () => {
 
                     {/* Voice Button for bot messages */}
                     {msg.sender === "bot" && (
-                      <div className="mt-3 flex items-center gap-2">
+                      <div className="mt-2 sm:mt-3 flex items-center gap-1 sm:gap-2">
                         <SpeakButton 
                           text={msg.text} 
                           className="text-xs text-slate-500 hover:text-pink-600"
+                          size="sm"
                         />
-                        <span className="text-xs text-slate-400">Listen to DOCai</span>
+                        <span className="text-xs text-slate-400 hidden sm:inline">Listen to DOCai</span>
                       </div>
                     )}
                   </div>
 
                   {msg.sender === "user" && (
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-slate-600 to-slate-700 text-white">
-                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-slate-600 to-slate-700 text-white">
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                     </div>
                   )}
                 </div>
@@ -347,16 +411,16 @@ const chat_page = () => {
 
               {/* Loading State */}
               {isLoading && (
-                <div className="flex items-start gap-2 sm:gap-4 w-full justify-start">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                    <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="flex items-start gap-1.5 sm:gap-2 lg:gap-4 w-full justify-start">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                   </div>
-                  <div className="bg-white text-slate-800 border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                  <div className="bg-white text-slate-800 border border-slate-200 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.1s]"></div>
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                      <span className="text-sm text-slate-600 ml-2">DOCai is analyzing...</span>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <span className="text-xs sm:text-sm text-slate-600 ml-1 sm:ml-2">DOCai is analyzing...</span>
                     </div>
                   </div>
                 </div>
@@ -367,9 +431,9 @@ const chat_page = () => {
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="bg-white border-t border-slate-200 px-3 sm:px-6 py-3 sm:py-4">
-        <div className="w-full max-w-4xl mx-auto space-y-3">
+      {/* Input Area - Mobile optimized */}
+      <div className="bg-white border-t border-slate-200 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 safe-area-pb">
+        <div className="w-full max-w-4xl mx-auto space-y-2 sm:space-y-3">
           {/* Voice Animation */}
           {isVoiceListening && (
             <div className="flex justify-center">
@@ -378,7 +442,7 @@ const chat_page = () => {
           )}
 
           {/* Input Row */}
-          <div className="flex gap-2 sm:gap-3">
+          <div className="flex gap-1.5 sm:gap-2 lg:gap-3">
             <div className="flex-1 relative">
               <Input
                 ref={inputRef}
@@ -387,9 +451,9 @@ const chat_page = () => {
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Describe your symptoms or emergency..."
                 disabled={isLoading}
-                className="h-10 sm:h-12 pr-12 sm:pr-16 rounded-lg sm:rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
+                className="h-9 sm:h-10 lg:h-12 pr-10 sm:pr-12 lg:pr-16 rounded-lg sm:rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 text-sm sm:text-base"
               />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+              <div className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2">
                 <VoiceInput
                   onVoiceCommand={handleVoiceCommand}
                   onListeningChange={setIsVoiceListening}
@@ -401,21 +465,21 @@ const chat_page = () => {
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
               size="lg"
-              className="h-10 sm:h-12 px-3 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              className="h-9 sm:h-10 lg:h-12 px-2 sm:px-3 lg:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
               {isLoading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span className="hidden sm:inline text-sm">Send</span>
-                  <SendHorizonal className="w-4 h-4 sm:ml-1" />
+                  <span className="hidden lg:inline text-sm">Send</span>
+                  <SendHorizonal className="w-3 h-3 sm:w-4 sm:h-4 lg:ml-1" />
                 </>
               )}
             </Button>
           </div>
 
-          {/* Emergency Actions - Moved here */}
-          <div className="border-t border-slate-200 pt-3">
+          {/* Emergency Actions - Enhanced with location */}
+          <div className="border-t border-slate-200 pt-2 sm:pt-3">
             <div className="w-full">
               <EmergencyActions />
             </div>

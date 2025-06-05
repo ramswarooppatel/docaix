@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SignalIndicators } from "@/components/ui/signal-indicators";
-import { HospitalFinder } from "@/components/HospitalFinder";
+import { SignalIndicators } from "@/components/signal-indicators";
 import { 
   ArrowLeft, 
   Plus, 
@@ -16,7 +15,8 @@ import {
   Phone, 
   Settings as SettingsIcon,
   Brain,
-  MapPin
+  MapPin,
+  ExternalLink
 } from "lucide-react";
 import Link from "next/link";
 
@@ -36,6 +36,16 @@ const SettingsPage = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<'contacts' | 'hospitals'>('contacts');
+
+  // Check for tab parameter on mount
+  useEffect(() => {
+    const hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (hash === '#hospitals' || urlParams.get('tab') === 'hospitals') {
+      setActiveTab('hospitals');
+    }
+  }, []);
 
   // Helper function to notify other components about contact updates
   const notifyContactsUpdated = () => {
@@ -151,6 +161,12 @@ const SettingsPage = () => {
     setEditPhone("");
   };
 
+  // Open Google Maps URL for hospitals
+  const openHospitalMaps = () => {
+    const googleMapsURL = "https://maps.app.goo.gl/NHbFRyMVtQGV1DbM7";
+    window.open(googleMapsURL, "_blank");
+  };
+
   // Show loading state while data is being loaded
   if (!isLoaded) {
     return (
@@ -228,10 +244,13 @@ const SettingsPage = () => {
           {activeTab === 'contacts' ? (
             /* Emergency Contacts Section */
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-slate-800">Emergency Contacts</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-800">Emergency Contacts</h2>
+                </div>
                 <Button
-                  onClick={() => setShowAddForm(true)}
+                  onClick={() => setShowAddForm(!showAddForm)}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
@@ -241,164 +260,219 @@ const SettingsPage = () => {
               </div>
 
               <p className="text-sm text-slate-600 mb-6">
-                Add emergency contacts who will receive alerts when you use the emergency messaging feature.
+                Add trusted contacts who will receive emergency messages when you use the SOS alert button.
               </p>
 
               {/* Add Contact Form */}
               {showAddForm && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <h3 className="font-semibold text-blue-800 mb-3">Add New Contact</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                      <Input
-                        type="text"
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        placeholder="Contact name"
-                        className="w-full"
-                        onKeyDown={(e) => e.key === "Enter" && addContact()}
-                        autoFocus
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
-                      <Input
-                        type="tel"
-                        value={newPhone}
-                        onChange={(e) => setNewPhone(e.target.value)}
-                        placeholder="+1234567890"
-                        className="w-full"
-                        onKeyDown={(e) => e.key === "Enter" && addContact()}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={addContact}
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        disabled={!newName.trim() || !newPhone.trim()}
-                      >
-                        <Save className="w-4 h-4 mr-1" />
-                        Save Contact
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setShowAddForm(false);
-                          setNewName("");
-                          setNewPhone("");
-                        }}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Cancel
-                      </Button>
-                    </div>
+                <div className="bg-slate-50 rounded-lg p-4 mb-6 border border-slate-200">
+                  <h3 className="font-semibold text-slate-800 mb-3">Add New Contact</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <Input
+                      placeholder="Contact Name"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="w-full"
+                    />
+                    <Input
+                      placeholder="Phone Number"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={addContact}
+                      disabled={!newName.trim() || !newPhone.trim()}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Save className="w-3 h-3 mr-1" />
+                      Save Contact
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setNewName("");
+                        setNewPhone("");
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               )}
 
               {/* Contacts List */}
-              <div className="space-y-3">
-                {contacts.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    <User className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm">No emergency contacts added yet.</p>
-                    <p className="text-xs mt-1">Add contacts to receive emergency alerts.</p>
-                  </div>
-                ) : (
-                  contacts.map((contact) => (
+              {contacts.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <User className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p className="text-sm">No emergency contacts added yet.</p>
+                  <p className="text-xs mt-1">Add contacts to enable SOS emergency alerts.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {contacts.map((contact) => (
                     <div
                       key={contact.id}
-                      className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200"
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
                     >
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-blue-600" />
-                      </div>
-
                       {editingId === contact.id ? (
-                        // Edit Mode
-                        <div className="flex-1 space-y-2">
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <Input
-                            type="text"
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            placeholder="Contact name"
-                            className="w-full h-8 text-sm"
-                            onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+                            className="text-sm"
                           />
                           <Input
-                            type="tel"
                             value={editPhone}
                             onChange={(e) => setEditPhone(e.target.value)}
-                            placeholder="Phone number"
-                            className="w-full h-8 text-sm"
-                            onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+                            className="text-sm"
                           />
-                          <div className="flex gap-2">
+                        </div>
+                      ) : (
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-slate-800 text-sm">
+                            {contact.name}
+                          </h3>
+                          <p className="text-slate-600 text-xs">{contact.phone}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-1 ml-3">
+                        {editingId === contact.id ? (
+                          <>
                             <Button
                               onClick={saveEdit}
                               size="sm"
-                              className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
-                              disabled={!editName.trim() || !editPhone.trim()}
+                              variant="outline"
+                              className="p-1.5 h-7 w-7"
                             >
-                              <Save className="w-3 h-3 mr-1" />
-                              Save
+                              <Save className="w-3 h-3" />
                             </Button>
                             <Button
                               onClick={cancelEdit}
-                              variant="outline"
                               size="sm"
-                              className="h-7 px-2"
+                              variant="outline"
+                              className="p-1.5 h-7 w-7"
                             >
-                              <X className="w-3 h-3 mr-1" />
-                              Cancel
+                              <X className="w-3 h-3" />
                             </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        // View Mode
-                        <>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-800 truncate">{contact.name}</p>
-                            <p className="text-sm text-slate-600 truncate">{contact.phone}</p>
-                          </div>
-                          <div className="flex gap-1">
+                          </>
+                        ) : (
+                          <>
                             <Button
                               onClick={() => startEdit(contact)}
-                              variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-slate-500 hover:text-blue-600"
+                              variant="outline"
+                              className="p-1.5 h-7 w-7"
                             >
-                              <Edit className="w-4 h-4" />
+                              <Edit className="w-3 h-3" />
                             </Button>
                             <Button
                               onClick={() => deleteContact(contact.id)}
-                              variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-slate-500 hover:text-red-600"
+                              variant="outline"
+                              className="p-1.5 h-7 w-7 text-red-600 hover:bg-red-50"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3 h-3" />
                             </Button>
-                          </div>
-                        </>
-                      )}
+                          </>
+                        )}
+                      </div>
                     </div>
-                  ))
-                )}
-              </div>
-
-              {/* Contact Count */}
-              {contacts.length > 0 && (
-                <div className="mt-4 text-center text-sm text-slate-600">
-                  {contacts.length} emergency contact{contacts.length !== 1 ? 's' : ''} configured
+                  ))}
                 </div>
               )}
+
+              {/* Info Box */}
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-700 text-sm font-medium mb-1">
+                  📱 How Emergency Alerts Work
+                </p>
+                <p className="text-blue-600 text-xs leading-relaxed">
+                  When you tap the SOS button, all contacts will receive an SMS with your location, 
+                  timestamp, and emergency message. Make sure to add trusted contacts who can respond quickly.
+                </p>
+              </div>
             </div>
           ) : (
             /* Hospital Finder Section */
-            <HospitalFinder />
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-red-600" />
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-800">Nearby Hospitals</h2>
+                </div>
+                <Button
+                  onClick={openHospitalMaps}
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <ExternalLink className="w-4 h-4 mr-1" />
+                  Open Maps
+                </Button>
+              </div>
+
+              <p className="text-sm text-slate-600 mb-6">
+                Find nearby hospitals and emergency medical centers using Google Maps.
+              </p>
+
+              {/* Hospital Maps Integration */}
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-red-50 to-blue-50 border border-red-200 rounded-lg p-6 text-center">
+                  <MapPin className="w-12 h-12 mx-auto mb-4 text-red-600" />
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                    Hospital Locator
+                  </h3>
+                  <p className="text-slate-600 text-sm mb-4 leading-relaxed">
+                    Click the button below to open Google Maps with nearby hospitals and emergency medical centers.
+                    This will show real-time information including directions, contact details, and operating hours.
+                  </p>
+                  
+                  <Button
+                    onClick={openHospitalMaps}
+                    className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3"
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Find Hospitals Near Me
+                    <ExternalLink className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+
+                {/* Features */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-800 mb-2 text-sm">🏥 Hospital Information</h4>
+                    <ul className="text-blue-700 text-xs space-y-1">
+                      <li>• Real-time operating hours</li>
+                      <li>• Contact phone numbers</li>
+                      <li>• Distance from your location</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-green-800 mb-2 text-sm">🗺️ Navigation Features</h4>
+                    <ul className="text-green-700 text-xs space-y-1">
+                      <li>• Turn-by-turn directions</li>
+                      <li>• Traffic conditions</li>
+                      <li>• Multiple route options</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Emergency Note */}
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm font-medium">
+                  🚨 For life-threatening emergencies, call 108 or 112 immediately instead of traveling to a hospital.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>

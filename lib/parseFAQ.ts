@@ -87,12 +87,12 @@ export function parseResponseWithFAQ(response: string): ParsedResponse {
   // Fallback: Try a different approach if no FAQs found
   if (faqs.length === 0) {
     // Try to match Q: and A: patterns across multiple lines
-    const qaPairs = faqSection.match(/\*\s*Q:\s*([^*]+?)(?=\*\s*Q:|$)/gs);
+    const qaPairs = faqSection.match(/\*\s*Q:\s*([^*]+?)(?=\*\s*Q:|$)/g);
     
     if (qaPairs) {
       qaPairs.forEach(pair => {
-        const qMatch = pair.match(/\*\s*Q:\s*(.+?)(?:\s*🤔)?\s*(?:\n|A:)/s);
-        const aMatch = pair.match(/A:\s*(.+?)(?=\*\s*Q:|$)/s);
+        const qMatch = pair.match(/\*\s*Q:\s*([\s\S]+?)(?:\s*🤔)?\s*(?:\n|A:)/);
+        const aMatch = pair.match(/A:\s*([\s\S]+?)(?=\*\s*Q:|$)/);
         
         if (qMatch && aMatch) {
           faqs.push({

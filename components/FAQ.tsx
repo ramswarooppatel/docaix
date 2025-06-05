@@ -13,7 +13,11 @@ interface FAQProps {
   className?: string;
 }
 
-export const FAQ: React.FC<FAQProps> = ({ faqs, className = "" }) => {
+export const FAQ: React.FC<FAQProps> = ({ 
+  faqs, 
+  className = ""
+}) => {
+  // Initialize with all items closed by default
   const [openItems, setOpenItems] = useState<Set<number>>(new Set());
 
   const toggleItem = (index: number) => {
@@ -41,13 +45,23 @@ export const FAQ: React.FC<FAQProps> = ({ faqs, className = "" }) => {
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
           <HelpCircle className="w-4 h-4" />
-          Frequently Asked Questions ({faqs.length})
+          Frequently Asked Questions
         </h3>
         <button
           onClick={toggleAll}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
         >
-          {openItems.size === faqs.length ? 'Collapse All' : 'Expand All'}
+          {openItems.size === faqs.length ? (
+            <>
+              <ChevronUp className="w-3 h-3" />
+              Collapse All
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-3 h-3" />
+              Expand All
+            </>
+          )}
         </button>
       </div>
       
@@ -55,14 +69,18 @@ export const FAQ: React.FC<FAQProps> = ({ faqs, className = "" }) => {
         {faqs.map((faq, index) => (
           <div
             key={index}
-            className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50 hover:bg-slate-100 transition-colors"
+            className={`border rounded-lg overflow-hidden transition-all duration-200 ${
+              openItems.has(index) 
+                ? 'border-blue-300 bg-blue-50 shadow-sm' 
+                : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+            }`}
           >
             <button
               onClick={() => toggleItem(index)}
               className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-slate-100 transition-colors duration-200 group"
             >
               <span className="text-sm font-medium text-slate-800 pr-2 group-hover:text-blue-700">
-                <span className="text-blue-600 mr-2">Q{index + 1}:</span>
+                <span className="text-blue-600 mr-1">Q{index + 1}:</span>
                 {faq.question}
               </span>
               <div className="flex-shrink-0">
@@ -75,10 +93,12 @@ export const FAQ: React.FC<FAQProps> = ({ faqs, className = "" }) => {
             </button>
             
             {openItems.has(index) && (
-              <div className="px-4 pb-3 border-t border-slate-200 bg-white">
+              <div className="px-4 pb-3 border-t border-blue-200 bg-white">
                 <div className="text-sm text-slate-700 leading-relaxed pt-3">
                   <div className="flex items-start gap-2">
-                    <span className="text-green-600 font-semibold flex-shrink-0">A:</span>
+                    <span className="text-blue-600 font-semibold flex-shrink-0">
+                      A:
+                    </span>
                     <div className="flex-1">
                       {faq.answer.split('\n').map((line, lineIndex) => (
                         <div key={lineIndex} className="mb-1">
@@ -104,13 +124,12 @@ export const FAQ: React.FC<FAQProps> = ({ faqs, className = "" }) => {
         ))}
       </div>
       
-      {faqs.length > 3 && (
-        <div className="mt-2 text-center">
-          <p className="text-xs text-slate-500">
-            💡 Tip: Click "Expand All" to view all questions at once
-          </p>
+      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-center gap-2 text-xs text-blue-700">
+          <HelpCircle className="w-3 h-3" />
+          <span className="font-medium">Click any question to expand the answer</span>
         </div>
-      )}
+      </div>
     </div>
   );
 };
