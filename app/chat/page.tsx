@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, SendHorizonal, Stethoscope, User } from "lucide-react";
 
+import VoiceInput from "@/components/VoiceInput";
+
 interface ChatMessage {
   id: number;
   sender: "user" | "bot";
@@ -15,6 +17,7 @@ interface ChatMessage {
 const chat_page = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageIdRef = useRef(0); // Add this line
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -49,7 +52,7 @@ const chat_page = () => {
     if (!input.trim()) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now(),
+      id: ++messageIdRef.current, // Use incremental ID instead of Date.now()
       sender: "user",
       text: input.trim(),
       timestamp: new Date(),
@@ -58,10 +61,10 @@ const chat_page = () => {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
-    // Simulate bot response(for demo purposes)
+    // Simulate bot response
     setTimeout(() => {
       const botMessage: ChatMessage = {
-        id: Date.now() + 1,
+        id: ++messageIdRef.current, // Use incremental ID
         sender: "bot",
         text: generateBotReply(input),
         timestamp: new Date(),
@@ -172,6 +175,35 @@ const chat_page = () => {
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
             />
           </div>
+
+          <VoiceInput
+            onVoiceCommand={(command) => {
+              console.log("Received voice command:", command);
+              setInput(command); // Set the input field
+
+              // Automatically send the message
+              const userMessage: ChatMessage = {
+                id: ++messageIdRef.current,
+                sender: "user",
+                text: command.trim(),
+                timestamp: new Date(),
+              };
+
+              setMessages((prev) => [...prev, userMessage]);
+              setInput(""); // Clear input after sending
+
+              // Generate bot response
+              setTimeout(() => {
+                const botMessage: ChatMessage = {
+                  id: ++messageIdRef.current,
+                  sender: "bot",
+                  text: generateBotReply(command),
+                  timestamp: new Date(),
+                };
+                setMessages((prev) => [...prev, botMessage]);
+              }, 800);
+            }}
+          />
           <Button
             type="button"
             onClick={handleSend}
