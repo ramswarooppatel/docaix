@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SignalIndicators } from "@/components/signal-indicators";
 import { EmergencyActions } from "@/components/emergency-actions";
 import { FAQ } from "@/components/FAQ";
+import { EnhancedMessageDisplay } from "@/components/EnhancedMessageDisplay";
 import { parseResponseWithFAQ } from "@/lib/parseFAQ";
 import {
   MessageCircle,
@@ -249,7 +250,7 @@ const chat_page = () => {
           {messages.length === 0 ? (
             <div className="text-center py-8 sm:py-16">
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Sparkles className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8" />
+                <Sparkles className="text-white w-6 h-6 sm:w-8 sm:h-8" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">
                 Welcome to DOCai
@@ -291,24 +292,28 @@ const chat_page = () => {
 
                   {/* Message Content */}
                   <div
-                    className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+                    className={`max-w-[90%] sm:max-w-[80%] rounded-2xl shadow-sm ${
                       msg.sender === "user"
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ml-auto"
-                        : "bg-white text-slate-800 border border-slate-200"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ml-auto px-4 py-3"
+                        : "bg-white text-slate-800 border border-slate-200 p-4"
                     }`}
                   >
-                    <div className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                      {msg.text}
-                    </div>
+                    {msg.sender === "user" ? (
+                      <div className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                        {msg.text}
+                      </div>
+                    ) : (
+                      <EnhancedMessageDisplay text={msg.text} />
+                    )}
 
                     {/* FAQs Section */}
                     {msg.sender === "bot" && msg.faqs && msg.faqs.length > 0 && (
-                      <FAQ faqs={msg.faqs} className="mt-3" />
+                      <FAQ faqs={msg.faqs} className="mt-4" />
                     )}
 
                     {/* Timestamp */}
                     <div
-                      className={`text-xs mt-2 ${
+                      className={`text-xs mt-3 ${
                         msg.sender === "user"
                           ? "text-blue-100"
                           : "text-slate-500"
@@ -322,11 +327,12 @@ const chat_page = () => {
 
                     {/* Voice Button for bot messages */}
                     {msg.sender === "bot" && (
-                      <div className="mt-2">
+                      <div className="mt-3 flex items-center gap-2">
                         <SpeakButton 
                           text={msg.text} 
-                          className="text-xs text-slate-500 hover:text-slate-700"
+                          className="text-xs text-slate-500 hover:text-pink-600"
                         />
+                        <span className="text-xs text-slate-400">Listen to DOCai</span>
                       </div>
                     )}
                   </div>
@@ -350,7 +356,7 @@ const chat_page = () => {
                       <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
                       <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.1s]"></div>
                       <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                      <span className="text-sm text-slate-600 ml-2">DOCai is thinking...</span>
+                      <span className="text-sm text-slate-600 ml-2">DOCai is analyzing...</span>
                     </div>
                   </div>
                 </div>
