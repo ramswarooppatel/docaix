@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, SendHorizonal } from "lucide-react";
+import { MessageCircle, SendHorizonal, Stethoscope } from "lucide-react";
 
 interface ChatMessage {
   id: number;
   sender: "user" | "bot";
   text: string;
+  timestamp: Date;
 }
 
 const chat_page = () => {
@@ -51,6 +52,7 @@ const chat_page = () => {
       id: Date.now(),
       sender: "user",
       text: input.trim(),
+      timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -62,6 +64,7 @@ const chat_page = () => {
         id: Date.now() + 1,
         sender: "bot",
         text: generateBotReply(input),
+        timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
     }, 800); // simulate typing delay
@@ -105,13 +108,52 @@ const chat_page = () => {
             messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`max-w-lg px-4 py-3 rounded-xl ${
-                  msg.sender === "user"
-                    ? "ml-auto bg-gray-700 text-white"
-                    : "mr-auto bg-gray-100 text-gray-700"
+                className={`flex items-start gap-3 max-w-lg ${
+                  msg.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
                 }`}
               >
-                {msg.text}
+                {/* Avatar */}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    msg.sender === "user"
+                      ? "bg-gray-700 text-white"
+                      : "bg-blue-500 text-white"
+                  }`}
+                >
+                  {msg.sender === "user" ? (
+                    <div className="w-6 h-6 bg-gray-500 rounded-full" />
+                  ) : (
+                    <Stethoscope className="w-4 h-4" />
+                  )}
+                </div>
+
+                {/* Message bubble */}
+                <div
+                  className={`px-4 py-3 rounded-xl ${
+                    msg.sender === "user"
+                      ? "bg-gray-700 text-white"
+                      : "bg-white text-gray-700 shadow-sm border border-gray-200"
+                  }`}
+                >
+                  {msg.sender === "bot" && (
+                    <div className="text-xs text-blue-600 font-medium mb-1">
+                      DOCai
+                    </div>
+                  )}
+                  <div>{msg.text}</div>
+                  <div
+                    className={`text-xs mt-2 ${
+                      msg.sender === "user"
+                        ? "text-gray-300"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {msg.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
               </div>
             ))
           )}
