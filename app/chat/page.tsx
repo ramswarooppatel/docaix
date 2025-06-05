@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, SendHorizonal, Stethoscope } from "lucide-react";
+import { MessageCircle, SendHorizonal, Stethoscope, User } from "lucide-react";
 
 interface ChatMessage {
   id: number;
@@ -112,7 +112,6 @@ const chat_page = () => {
                   msg.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
                 }`}
               >
-                {/* Avatar */}
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     msg.sender === "user"
@@ -121,7 +120,7 @@ const chat_page = () => {
                   }`}
                 >
                   {msg.sender === "user" ? (
-                    <div className="w-6 h-6 bg-gray-500 rounded-full" />
+                    <User />
                   ) : (
                     <Stethoscope className="w-4 h-4" />
                   )}
@@ -143,9 +142,7 @@ const chat_page = () => {
                   <div>{msg.text}</div>
                   <div
                     className={`text-xs mt-2 ${
-                      msg.sender === "user"
-                        ? "text-gray-300"
-                        : "text-gray-400"
+                      msg.sender === "user" ? "text-gray-300" : "text-gray-400"
                     }`}
                   >
                     {msg.timestamp.toLocaleTimeString([], {
