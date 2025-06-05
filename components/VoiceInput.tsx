@@ -51,6 +51,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
   });
 
   // Check microphone permissions
+  // Check microphone permissions
   useEffect(() => {
     const checkPermissions = async () => {
       try {
@@ -88,13 +89,10 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
         (position) => {
           setUserLocation({
             lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-          console.log('Voice input location acquired:', {
-            lat: position.coords.latitude,
             lng: position.coords.longitude,
             accuracy: position.coords.accuracy
           });
+          console.log("Voice input location acquired");
         },
         (error) => {
           console.log('Voice input: Location access failed:', error.message);
@@ -137,10 +135,14 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     }
 
     return () => {
+    }
+
+    return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
+  }, [isListening]);
   }, [isListening]);
 
   // Notify parent component of listening state changes
@@ -148,6 +150,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     onListeningChange?.(isListening);
   }, [isListening, onListeningChange]);
 
+  // Enhanced voice command processing
   // Enhanced voice command processing
   useEffect(() => {
     if (transcript && !isListening && transcript !== lastProcessedTranscript.current && transcript.trim().length > 0) {
@@ -158,20 +161,18 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
       
       // Enhanced location commands
       const locationCommands = [
-        'find hospitals near me',
-        'hospitals nearby',
-        'emergency rooms near me',
-        'nearest hospital',
-        'find medical help',
-        'where is the closest hospital',
-        'emergency',
-        'help me',
-        'call ambulance'
+        "find hospitals near me",
+        "hospitals nearby",
+        "emergency rooms near me",
+        "nearest hospital",
+        "find medical help",
+        "where is the closest hospital",
       ];
 
       const isLocationCommand = locationCommands.some(cmd => 
         transcript.toLowerCase().includes(cmd.toLowerCase())
       );
+
 
       if (isLocationCommand && userLocation) {
         processedCommand = `${transcript} (Location: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)})`;
@@ -191,7 +192,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
 
   // Voice start with permission handling
   const handleVoiceStart = async () => {
-    if (disabled) return;
+    if (disabled || !isSupported) return;
 
     // Request microphone permission explicitly
     if (micPermission !== 'granted') {
@@ -251,7 +252,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     <div className="relative">
       <Button
         onClick={handleVoiceStart}
-        disabled={disabled || micPermission === 'denied'}
+        disabled={disabled || micPermission === "denied"}
         variant="outline"
         size="sm"
         className={`h-8 w-8 p-0 relative transition-all duration-300 ${

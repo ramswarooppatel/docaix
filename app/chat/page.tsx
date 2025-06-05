@@ -514,6 +514,12 @@ const chat_page = () => {
 
     console.log("🎤 Voice command received:", command);
 
+    // Validate the command
+    if (!command || command.trim() === "") {
+      console.log("⚠️ Empty voice command received");
+      return;
+    }
+
     // Create and show user message first
     const userMessage: ChatMessage = {
       id: ++messageIdRef.current,
@@ -526,6 +532,11 @@ const chat_page = () => {
 
     // Then send to API
     await sendMessage(command.trim());
+  };
+
+  const handleVoiceListeningChange = (isListening: boolean) => {
+    console.log("🎤 Voice listening state changed:", isListening);
+    setIsVoiceListening(isListening);
   };
 
   return (
