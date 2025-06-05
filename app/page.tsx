@@ -1,7 +1,232 @@
+"use client";
+
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { SignalIndicators } from "@/components/ui/signal-indicators";
+import {
+  MessageCircle,
+  Settings,
+  Heart,
+  Stethoscope,
+  Brain,
+  Shield,
+  Phone,
+  MapPin,
+  Clock,
+  Users,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import Link from "next/link";
+
 const Home = () => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <h1 className="text-3xl font-bold">Welcome to FirstAid AI</h1>
+    <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header */}
+      <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
+        <div className="w-full max-w-6xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+              <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg sm:text-2xl text-slate-800">
+                DOCai
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-600">
+                AI Medical Assistant
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/settings">
+              <Button variant="outline" size="sm" className="hidden sm:flex">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
+            </Link>
+            <SignalIndicators className="scale-75 sm:scale-100" />
+          </div>
+        </div>
+      </div>
+
+      {/* Hero Section */}
+      <div className="flex-1 px-3 sm:px-6 py-6 sm:py-12">
+        <div className="w-full max-w-6xl mx-auto">
+          {/* Main Hero */}
+          <div className="text-center mb-12 sm:mb-16">
+            <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center shadow-xl">
+              <Sparkles className="text-blue-600 w-10 h-10 sm:w-16 sm:h-16" />
+            </div>
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-slate-800 mb-4 sm:mb-6">
+              Your AI-Powered
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 block">
+                Medical Assistant
+              </span>
+            </h1>
+            <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
+              Get instant first aid guidance, emergency assistance, and medical
+              support 24/7. DOCai is here to help you stay safe and handle
+              medical emergencies with confidence.
+            </p>
+
+            {/* Primary Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+              <Link href="/chat">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <MessageCircle className="w-5 h-5 mr-3" />
+                  Start Emergency Chat
+                  <ArrowRight className="w-5 h-5 ml-3" />
+                </Button>
+              </Link>
+              <Link href="/settings">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+                >
+                  <Settings className="w-5 h-5 mr-3" />
+                  Setup Emergency Contacts
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
+            {/* Emergency Response */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
+                <Phone className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                Emergency Response
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Instant access to emergency services (108) and automatic alerts to
+                your emergency contacts with your location.
+              </p>
+            </div>
+
+            {/* First Aid Guidance */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+                <Heart className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                First Aid Guidance
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Step-by-step first aid instructions for burns, cuts, choking, CPR,
+                and other medical emergencies.
+              </p>
+            </div>
+
+            {/* 24/7 Availability */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <Clock className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                24/7 Availability
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                AI-powered assistance available round the clock, providing
+                immediate help when you need it most.
+              </p>
+            </div>
+
+            {/* Location Services */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+                <MapPin className="w-6 h-6 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                Location Sharing
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Automatic location sharing with emergency contacts and services for
+                faster response times.
+              </p>
+            </div>
+
+            {/* Medical Knowledge */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
+                <Stethoscope className="w-6 h-6 text-indigo-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                Medical Knowledge
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Comprehensive medical database covering symptoms, treatments, and
+                emergency procedures.
+              </p>
+            </div>
+
+            {/* Emergency Contacts */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
+                <Users className="w-6 h-6 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                Emergency Contacts
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Manage and alert your emergency contacts instantly during critical
+                situations.
+              </p>
+            </div>
+          </div>
+
+          {/* Emergency Notice */}
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-6 sm:p-8 text-center">
+            <Shield className="w-12 h-12 text-red-600 mx-auto mb-4" />
+            <h3 className="text-xl sm:text-2xl font-bold text-red-800 mb-3">
+              🚨 Important Emergency Notice
+            </h3>
+            <p className="text-red-700 text-lg leading-relaxed max-w-3xl mx-auto">
+              DOCai provides first aid guidance and emergency assistance, but is not
+              a replacement for professional medical care. For life-threatening
+              emergencies, always call 108 immediately.
+            </p>
+          </div>
+
+          {/* Bottom CTA */}
+          <div className="text-center mt-12 sm:mt-16">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-4">
+              Ready to Get Started?
+            </h2>
+            <p className="text-lg text-slate-600 mb-8">
+              Join thousands who trust DOCai for emergency medical assistance.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/chat">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <MessageCircle className="w-5 h-5 mr-3" />
+                  Start Using DOCai Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="bg-white/50 border-t border-slate-200 px-3 sm:px-6 py-6">
+        <div className="w-full max-w-6xl mx-auto text-center">
+          <p className="text-sm text-slate-600">
+            © 2024 DOCai - AI-Powered Medical Assistant. Always consult healthcare
+            professionals for serious medical conditions.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

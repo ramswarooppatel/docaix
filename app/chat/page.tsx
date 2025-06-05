@@ -211,6 +211,9 @@ const chat_page = () => {
             <div className="text-center text-slate-600 mt-10 sm:mt-20 px-4">
               <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center shadow-lg">
                 <Sparkles className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8" />
+            <div className="text-center text-slate-600 mt-10 sm:mt-20 px-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center shadow-lg">
+                <Sparkles className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">
                 Welcome to DOCai
@@ -241,17 +244,29 @@ const chat_page = () => {
                   key={msg.id}
                   className={`flex items-start gap-2 sm:gap-4 w-full ${
                     msg.sender === "user" ? "justify-end" : "justify-start"
+            <>
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex items-start gap-2 sm:gap-4 w-full ${
+                    msg.sender === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
                   {/* Avatar - Mobile Optimized */}
+                  {/* Avatar - Mobile Optimized */}
                   {msg.sender === "bot" && (
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                      <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                       <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   )}
 
                   {/* Enhanced Message bubble - Mobile Optimized */}
+
+                  {/* Enhanced Message bubble - Mobile Optimized */}
                   <div
+                    className={`px-3 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-sm max-w-[85%] sm:max-w-2xl break-words ${
                     className={`px-3 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-sm max-w-[85%] sm:max-w-2xl break-words ${
                       msg.sender === "user"
                         ? "bg-gradient-to-br from-slate-700 to-slate-800 text-white"
