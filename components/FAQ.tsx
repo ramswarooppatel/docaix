@@ -1,32 +1,59 @@
 "use client";
 
-import React, { useState } from "react";
-import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp, HelpCircle, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 interface FAQItem {
   question: string;
   answer: string;
+  isLoading?: boolean;
+  isProcessed?: boolean;
+  processingError?: string;
 }
 
 interface FAQProps {
   faqs: FAQItem[];
   className?: string;
+  isProcessingFAQs?: boolean;
+  onFAQProcess?: (index: number) => Promise<void>;
 }
 
 export const FAQ: React.FC<FAQProps> = ({ 
   faqs, 
-  className = ""
+  className = "",
+  isProcessingFAQs = false,
+  onFAQProcess
 }) => {
   // Initialize with all items closed by default
   const [openItems, setOpenItems] = useState<Set<number>>(new Set());
+  const [processingItems, setProcessingItems] = useState<Set<number>>(new Set());
 
-  const toggleItem = (index: number) => {
+  const toggleItem = async (index: number) => {
     const newOpenItems = new Set(openItems);
+    
     if (newOpenItems.has(index)) {
       newOpenItems.delete(index);
     } else {
       newOpenItems.add(index);
+      
+      // If FAQ item needs processing and has onFAQProcess callback
+      const faqItem = faqs[index];
+      if (onFAQProcess && !faqItem.isProcessed && !faqItem.isLoading && !processingItems.has(index)) {
+        setProcessingItems(prev => new Set(prev).add(index));
+        try {
+          await onFAQProcess(index);
+        } catch (error) {
+          console.error('FAQ processing error:', error);
+        } finally {
+          setProcessingItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(index);
+            return newSet;
+          });
+        }
+      }
     }
+    
     setOpenItems(newOpenItems);
   };
 
@@ -64,82 +91,126 @@ export const FAQ: React.FC<FAQProps> = ({
           )}
         </button>
       </div>
-      
-      <div className="space-y-2">
-        {faqs.map((faq, index) => (
-          <div
-            key={index}
-            className={`border rounded-lg overflow-hidden transition-all duration-200 ${
-              openItems.has(index) 
-                ? 'border-blue-300 bg-blue-50 shadow-sm' 
-                : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
-            }`}
-          >
-            <button
-              onClick={() => toggleItem(index)}
-              className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-slate-100 transition-colors duration-200 group"
-            >
-              <span className="text-sm font-medium text-slate-800 pr-2 group-hover:text-blue-700">
-                <span className="text-blue-600 mr-1">Q{index + 1}:</span>
-                {faq.question}
-              </span>
-              <div className="flex-shrink-0">
-                {openItems.has(index) ? (
-                  <ChevronUp className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
-                )}
-              </div>
-            </button>
-              <div
-              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+        <div className="space-y-2">
+        {faqs.map((faq, index) => {
+          const isItemLoading = faq.isLoading || processingItems.has(index);
+          const isItemProcessed = faq.isProcessed;
+          const hasError = faq.processingError;
+          
+          return (
+            <div
+              key={index}
+              className={`border rounded-lg overflow-hidden transition-all duration-200 ${
                 openItems.has(index) 
-                  ? 'max-h-96 opacity-100' 
-                  : 'max-h-0 opacity-0'
+                  ? 'border-blue-300 bg-blue-50 shadow-sm' 
+                  : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
               }`}
             >
-              <div className="px-4 pb-3 border-t border-blue-200 bg-white">
-                <div className="text-sm text-slate-700 leading-relaxed pt-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-blue-600 font-semibold flex-shrink-0">
-                      A:
-                    </span>
-                    <div className="flex-1">
-                      {faq.answer.split('\n').map((line, lineIndex) => (
-                        <div 
-                          key={lineIndex} 
-                          className={`mb-1 transition-all duration-300 ease-in-out delay-${Math.min(lineIndex * 50, 300)} ${
-                            openItems.has(index) 
-                              ? 'translate-y-0 opacity-100' 
-                              : 'translate-y-2 opacity-0'
-                          }`}
-                        >
-                          {line.trim() && (
-                            <span
-                              dangerouslySetInnerHTML={{
-                                __html: line
-                                  .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-800">$1</strong>')
-                                  .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-                                  .replace(/ONLY USE A TOURNIQUET IF/g, '<strong class="text-red-600 font-bold">ONLY USE A TOURNIQUET IF</strong>')
-                                  .replace(/DO NOT USE WATER OR SOAP/g, '<strong class="text-red-600 font-bold">DO NOT USE WATER OR SOAP</strong>')
-                              }}
-                            />
-                          )}
-                        </div>
-                      ))}
+              <button
+                onClick={() => toggleItem(index)}
+                disabled={isItemLoading}
+                className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-slate-100 transition-colors duration-200 group disabled:opacity-50"
+              >
+                <span className="text-sm font-medium text-slate-800 pr-2 group-hover:text-blue-700 flex items-center gap-2">
+                  <span className="text-blue-600 mr-1">Q{index + 1}:</span>
+                  {faq.question}
+                  
+                  {/* Loading indicator */}
+                  {isItemLoading && (
+                    <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                  )}
+                  
+                  {/* Processed indicator */}
+                  {isItemProcessed && !isItemLoading && (
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                  )}
+                  
+                  {/* Error indicator */}
+                  {hasError && !isItemLoading && (
+                    <AlertCircle className="w-3 h-3 text-red-600" />
+                  )}
+                </span>
+                <div className="flex-shrink-0">
+                  {openItems.has(index) ? (
+                    <ChevronUp className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
+                  )}
+                </div>
+              </button>
+                <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  openItems.has(index) 
+                    ? 'max-h-96 opacity-100' 
+                    : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="px-4 pb-3 border-t border-blue-200 bg-white">
+                  <div className="text-sm text-slate-700 leading-relaxed pt-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-600 font-semibold flex-shrink-0">
+                        A:
+                      </span>
+                      <div className="flex-1">
+                        {isItemLoading ? (
+                          <div className="flex items-center gap-2 py-4">
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                            <span className="text-slate-500 italic">
+                              Processing detailed answer...
+                            </span>
+                          </div>
+                        ) : hasError ? (
+                          <div className="flex items-center gap-2 py-2">
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                            <span className="text-red-600">
+                              Failed to load detailed answer. Please try again.
+                            </span>
+                          </div>
+                        ) : (
+                          faq.answer.split('\n').map((line, lineIndex) => (
+                            <div 
+                              key={lineIndex} 
+                              className={`mb-1 transition-all duration-300 ease-in-out delay-${Math.min(lineIndex * 50, 300)} ${
+                                openItems.has(index) 
+                                  ? 'translate-y-0 opacity-100' 
+                                  : 'translate-y-2 opacity-0'
+                              }`}
+                            >
+                              {line.trim() && (
+                                <span
+                                  dangerouslySetInnerHTML={{
+                                    __html: line
+                                      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-800">$1</strong>')
+                                      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                                      .replace(/ONLY USE A TOURNIQUET IF/g, '<strong class="text-red-600 font-bold">ONLY USE A TOURNIQUET IF</strong>')
+                                      .replace(/DO NOT USE WATER OR SOAP/g, '<strong class="text-red-600 font-bold">DO NOT USE WATER OR SOAP</strong>')
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      
-      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-center gap-2 text-xs text-blue-700">
           <HelpCircle className="w-3 h-3" />
-          <span className="font-medium">Click any question to expand the answer</span>
+          <span className="font-medium">
+            {isProcessingFAQs 
+              ? "Processing FAQ responses..." 
+              : "Click any question to expand the answer"
+            }
+          </span>
+          {isProcessingFAQs && (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          )}
         </div>
       </div>
     </div>

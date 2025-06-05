@@ -4,8 +4,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 declare global {
   interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
+    SpeechRecognition: {
+      new(): SpeechRecognition;
+    };
+    webkitSpeechRecognition: {
+      new(): SpeechRecognition;
+    };
   }
 }
 
@@ -41,28 +45,34 @@ export function useSpeechToText() {
 
     if (SpeechRecognitionClass) {
       const recognition = new SpeechRecognitionClass();
-      
-      // Mobile-optimized settings
+        // Mobile-optimized settings
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = "en-US";
       recognition.maxAlternatives = 1;
       
       // Mobile-specific optimizations
+      // if (isMobile) {
+      //   // Mobile optimizations can be added here if needed
+      // }
     
 
       recognition.onstart = () => {
         console.log("Speech recognition started on", isMobile ? "mobile" : "desktop");
-        setIsListening(true);
-        setError(null);
+        setIsListening(true);        setError(null);
         isProcessingRef.current = true;
+        
+        // Clear any existing timeout before setting a new one
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
         
         // Shorter timeout for mobile to save battery
         const timeout = isMobile ? 20000 : 30000;
         timeoutRef.current = setTimeout(() => {
           if (recognitionRef.current && isProcessingRef.current) {
             console.log("Speech recognition timeout - stopping");
-            recognition.stop();
+            recognitionRef.current.stop();
           }
         }, timeout);
       };
@@ -93,8 +103,7 @@ export function useSpeechToText() {
         isProcessingRef.current = false;
       };
 
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
+      recognition.onerror = (event: any) => {        console.log("Speech recognition error:", event.error);
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
@@ -117,7 +126,9 @@ export function useSpeechToText() {
             errorMessage = isMobile ? "Network error." : "Network error. Please check your connection.";
             break;
           case "aborted":
-            errorMessage = null; // Don't show error for manual cancellation
+            // This is expected when user cancels - don't log as error or show message
+            console.log("Speech recognition cancelled by user");
+            errorMessage = "";
             break;
           default:
             errorMessage = isMobile ? `Error: ${errorType}` : `Recognition error: ${errorType}`;
@@ -126,6 +137,8 @@ export function useSpeechToText() {
         if (errorMessage) {
           setError(errorMessage);
         }
+        
+        // Always set listening to false on error, including aborted
         setIsListening(false);
         isProcessingRef.current = false;
       };
@@ -151,12 +164,16 @@ export function useSpeechToText() {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isMobile]);
-
-  const startListening = useCallback(async () => {
+  }, [isMobile]);  const startListening = useCallback(async () => {
     if (!recognitionRef.current || isListening) return;
 
     try {
+      // Clear any existing timeouts
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
       // Enhanced permission request for mobile
       const constraints = {
         audio: {
@@ -173,11 +190,18 @@ export function useSpeechToText() {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       stream.getTracks().forEach(track => track.stop());
 
-      isProcessingRef.current = false;
+      // Reset state before starting
       setError(null);
       setTranscript("");
       
       console.log("Starting speech recognition on", isMobile ? "mobile device" : "desktop");
+      
+      // Ensure recognition is not already running
+      if (recognitionRef.current.state === 'recording') {
+        recognitionRef.current.stop();
+        await new Promise(resolve => setTimeout(resolve, 100)); // Brief delay
+      }
+      
       recognitionRef.current.start();
     } catch (err) {
       console.error("Error accessing microphone:", err);
@@ -186,6 +210,7 @@ export function useSpeechToText() {
         : "Could not access microphone. Please ensure microphone permissions are granted.";
       setError(errorMessage);
       setIsListening(false);
+      isProcessingRef.current = false;
     }
   }, [isListening, isMobile]);
 
@@ -199,23 +224,34 @@ export function useSpeechToText() {
       console.log("Stopping speech recognition");
       recognitionRef.current.stop();
     }
-  }, [isListening]);
-
-  const cancelListening = useCallback(() => {
+  }, [isListening]);  const cancelListening = useCallback(() => {
+    console.log("Cancelling speech recognition");
+    
+    // Clear timeout first
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
     
+    // Reset state immediately to prevent race conditions
+    setIsListening(false);
+    setTranscript("");
+    setError(null);
+    isProcessingRef.current = false;
+    
+    // Then abort the recognition if it exists and is active
     if (recognitionRef.current) {
-      console.log("Cancelling speech recognition");
-      recognitionRef.current.abort();
-      setIsListening(false);
-      setTranscript("");
-      isProcessingRef.current = false;
+      try {
+        // Check if recognition is actually running before aborting
+        if (isProcessingRef.current || recognitionRef.current.state === 'recording') {
+          recognitionRef.current.abort();
+        }
+      } catch (err) {
+        // Ignore abort errors as they're expected
+        console.log("Speech recognition abort completed");
+      }
     }
   }, []);
-
   return {
     transcript,
     isListening,
@@ -223,7 +259,7 @@ export function useSpeechToText() {
     startListening,
     stopListening,
     cancelListening,
-    isSupported: !!recognitionRef.current,
+    isSupported: typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition),
     isMobile
   };
 }

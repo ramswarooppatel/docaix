@@ -21,11 +21,34 @@ const VoiceInput: React.FC<Props> = ({ onVoiceCommand, onListeningChange, disabl
   const lastProcessedTranscript = useRef("");
   const [timer, setTimer] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);  const [isMobile, setIsMobile] = useState(false);
   const [isIOSDevice, setIsIOSDevice] = useState(false);
   const [micPermission, setMicPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [microphoneState, setMicrophoneState] = useState<'idle' | 'listening' | 'processing' | 'error'>('idle');
   
+  // Enhanced microphone state management
+  useEffect(() => {
+    if (isListening) {
+      setMicrophoneState('listening');
+    } else if (transcript && transcript.trim().length > 0 && !error) {
+      setMicrophoneState('processing');
+      // Reset to idle after processing is complete
+      const timeout = setTimeout(() => {
+        setMicrophoneState('idle');
+      }, 1000);
+      return () => clearTimeout(timeout);
+    } else if (error) {
+      setMicrophoneState('error');
+      // Reset error state after 3 seconds
+      const timeout = setTimeout(() => {
+        setMicrophoneState('idle');
+      }, 3000);
+      return () => clearTimeout(timeout);
+    } else {
+      setMicrophoneState('idle');
+    }
+  }, [isListening, transcript, error]);
+
   // Enhanced sound effects with settings-based volumes
   const volumeLevel = voiceSettings.volume * (isMobile ? 0.5 : 1);
   const startSound = useSound('../assets/sound/ting.mp3', { volume: volumeLevel });
