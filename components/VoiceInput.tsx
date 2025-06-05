@@ -3,7 +3,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSpeechToText } from "../hooks/useSpeechToText";
 import { useSettings } from "../hooks/useSettings";
-import { Mic, MicOff, X, MapPin, Smartphone } from "lucide-react";
+import {
+  Mic,
+  MicOff,
+  X,
+  MapPin,
+  Smartphone,
+  SendHorizonal,
+} from "lucide-react";
 import { Button } from "./ui/button";
 
 interface Props {
@@ -237,6 +244,18 @@ const VoiceInput: React.FC<Props> = ({
       lastProcessedTranscript.current = transcript;
       console.log("Voice command processed:", transcript);
 
+      // Check for cancel commands
+      const cancelCommands = ["stop", "cancel", "never mind", "quit", "exit"];
+      const isCancelCommand = cancelCommands.some((cmd) =>
+        transcript.toLowerCase().includes(cmd.toLowerCase())
+      );
+
+      if (isCancelCommand) {
+        console.log("Cancel command detected, stopping voice input");
+        handleCancel();
+        return;
+      }
+
       let processedCommand = transcript;
 
       // Enhanced location commands
@@ -265,7 +284,7 @@ const VoiceInput: React.FC<Props> = ({
         navigator.vibrate([100, 50, 100]); // Success pattern
       }
 
-      playSound(1000, 100); // Success sound
+      playSound(1000, 150); // Success sound
       onVoiceCommand(processedCommand);
     }
   }, [transcript, isListening, onVoiceCommand, userLocation, isMobile]);
@@ -304,77 +323,59 @@ const VoiceInput: React.FC<Props> = ({
     startListening();
   };
 
+  // Enhanced cancel handler with voice command detection
   const handleCancel = () => {
-    console.log("Voice input cancelled");
+    console.log("Voice input cancelled by user");
 
     // Mobile haptic feedback for cancellation
     if (isMobile && "vibrate" in navigator) {
-      navigator.vibrate(200); // Cancel vibration
+      navigator.vibrate([200, 100, 200]); // Cancel vibration pattern
     }
 
-    playSound(400, 200); // Cancel sound
+    playSound(400, 300); // Cancel sound - lower frequency, longer duration
     cancelListening();
   };
 
-  // Show error state if not supported
-  if (!isSupported) {
+  // Simple listening indicator - just change the icon
+  if (isListening) {
     return (
       <div className="relative">
         <Button
-          disabled={true}
+          onClick={handleCancel}
           variant="outline"
           size="sm"
-          className="h-8 w-8 p-0 opacity-50"
-          title="Voice input not supported in this browser"
+          className="h-8 w-8 p-0 bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400 touch-manipulation transition-all duration-200 animate-pulse"
+          title="Click to stop listening"
         >
-          <MicOff className="h-4 w-4 text-gray-400" />
+          <MicOff className="h-4 w-4 text-red-600" />
         </Button>
-        <div className="absolute top-full right-0 mt-1 text-xs text-gray-500 whitespace-nowrap">
-          Voice not supported
+
+        {/* Timer indicator */}
+        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-mono">
+          {timer}
         </div>
-      </div>
-    );
-  }
 
-  // Mobile listening UI with larger touch targets
-  if (isListening) {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-6 max-w-sm w-full mx-auto shadow-2xl">
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center animate-pulse">
-              <MicOff className="w-8 h-8 text-red-600" />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Listening...
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Speak clearly into your microphone
+        {/* Live transcript tooltip */}
+        {transcript && transcript.trim() && (
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 max-w-xs bg-black/80 text-white text-xs rounded-lg px-3 py-2 z-10">
+            <div className="text-center">
+              <p className="opacity-60">You said:</p>
+              <p className="font-medium">
+                "{transcript.substring(0, 50)}
+                {transcript.length > 50 ? "..." : ""}"
               </p>
-              <div className="text-lg font-mono text-blue-600 mt-2">
-                {formatTimer(timer)}
-              </div>
             </div>
-
-            {userLocation && (
-              <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-                <MapPin className="w-4 h-4" />
-                <span>Location enabled</span>
-              </div>
-            )}
-
-            <Button
-              onClick={handleCancel}
-              variant="outline"
-              className="w-full bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
+            {/* Arrow pointing up */}
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-black/80"></div>
           </div>
-        </div>
+        )}
+
+        {/* Location indicator */}
+        {userLocation && (
+          <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-green-500 rounded-full border border-white flex items-center justify-center">
+            <MapPin className="w-2 h-2 text-white" />
+          </div>
+        )}
       </div>
     );
   }
@@ -386,50 +387,77 @@ const VoiceInput: React.FC<Props> = ({
         disabled={disabled || micPermission === "denied"}
         variant="outline"
         size="sm"
-        className="h-8 w-8 p-0 hover:bg-gray-100 hover:shadow-md disabled:opacity-50 touch-manipulation"
+        className={`h-8 w-8 p-0 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md disabled:opacity-50 touch-manipulation transition-all duration-200 ${
+          micPermission === "granted" ? "border-green-300 bg-green-50" : ""
+        }`}
         title={
           micPermission === "denied"
-            ? "Microphone access denied"
+            ? "Microphone access denied - click to retry"
             : userLocation
             ? `Voice input with location`
-            : "Start voice input"
+            : "Start voice input - speak your medical question"
         }
       >
-        <Mic className="h-4 w-4 text-gray-600" />
+        <Mic
+          className={`h-4 w-4 ${
+            micPermission === "granted" ? "text-green-600" : "text-gray-600"
+          }`}
+        />
 
-        {/* Enhanced indicators */}
+        {/* Enhanced status indicators */}
         {userLocation && (
-          <MapPin className="absolute -top-1 -right-1 w-3 h-3 text-green-600 bg-white rounded-full" />
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-white flex items-center justify-center">
+            <MapPin className="w-2 h-2 text-white" />
+          </div>
         )}
 
         {isMobile && (
-          <Smartphone className="absolute -bottom-0.5 -right-0.5 w-2 h-2 text-blue-600 bg-white rounded-full" />
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border border-white flex items-center justify-center">
+            <Smartphone className="w-2 h-2 text-white" />
+          </div>
         )}
 
         {micPermission === "denied" && (
-          <div className="absolute -top-1 -left-1 w-3 h-3 bg-red-500 rounded-full border border-white" />
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-red-500 rounded-full border border-white animate-pulse" />
+        )}
+
+        {micPermission === "granted" && !userLocation && !isMobile && (
+          <div className="absolute -top-1 -left-1 w-2 h-2 bg-green-500 rounded-full border border-white" />
         )}
       </Button>
 
-      {/* Enhanced Error Display */}
+      {/* Enhanced Error Display with retry option */}
       {error && (
-        <div className="absolute top-full right-0 mt-2 max-w-xs bg-red-50 border border-red-200 rounded-md px-3 py-2 text-sm text-red-600 z-10 shadow-lg">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-          {micPermission === "denied" && (
-            <div className="mt-1 text-xs text-red-500">
-              Enable microphone in browser settings
+        <div className="absolute top-full right-0 mt-2 max-w-xs bg-red-50 border border-red-200 rounded-lg px-3 py-3 text-sm text-red-600 z-10 shadow-lg">
+          <div className="flex items-start gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-1" />
+            <div className="space-y-2">
+              <span className="font-medium">{error}</span>
+              {micPermission === "denied" && (
+                <div className="text-xs text-red-500">
+                  <p>To enable microphone:</p>
+                  <p>• Click the 🔒 icon in address bar</p>
+                  <p>• Allow microphone access</p>
+                  <p>• Refresh the page</p>
+                </div>
+              )}
+              <Button
+                onClick={handleVoiceStart}
+                size="sm"
+                variant="outline"
+                className="text-xs h-6 px-2 mt-1 border-red-300 text-red-600 hover:bg-red-50"
+              >
+                Retry
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       )}
 
       {/* Mobile-specific help text */}
-      {isMobile && micPermission === "unknown" && (
-        <div className="absolute top-full right-0 mt-1 text-xs text-gray-500 whitespace-nowrap">
-          Touch to enable voice
+      {isMobile && micPermission === "unknown" && !isListening && (
+        <div className="absolute top-full right-0 mt-1 text-xs text-gray-500 bg-white border border-gray-200 rounded px-2 py-1 shadow-sm whitespace-nowrap">
+          👆 Touch to enable voice
         </div>
       )}
     </div>
