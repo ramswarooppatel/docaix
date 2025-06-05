@@ -197,12 +197,12 @@ const Home = () => {
 
           {/* Bottom CTA */}
           <div className="text-center mt-12 sm:mt-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-4">
+            {/* <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-4">
               Ready to Get Started?
             </h2>
             <p className="text-lg text-slate-600 mb-8">
               Join thousands who trust DocAI for emergency medical assistance.
-            </p>
+            </p> */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/chat">
                 <Button
