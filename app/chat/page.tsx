@@ -65,7 +65,7 @@ const chat_page = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/llm", {
+      const res = await fetch("/api/chat_backend", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
