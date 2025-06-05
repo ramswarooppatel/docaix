@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import Groq from "groq-sdk";
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: Request) {
   try {
@@ -12,32 +15,148 @@ export async function POST(req: Request) {
       );
     }
 
-    // Simulated delay to mimic LLM processing
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Get Groq chat completion
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: `
+You are an emergency medical assistant providing ONLY verified first-aid guidance for immediate care situations.
 
-    // Fake logic for simulation (customize this if needed)
-    const lower = prompt.toLowerCase();
+## Response Format
+- Use simple, clear bullet points
+- Include only essential information
+- Provide actionable steps the user can follow immediately
+- No unnecessary explanations or background information
 
-    let reply = "";
+## Emergency Response Template
+For life-threatening situations:
+**"EMERGENCY! Call emergency services immediately (911/local emergency number).**
 
-    if (lower.includes("bleeding")) {
-      reply =
-        "For bleeding, apply direct pressure and elevate the wound. Seek medical help if it doesn't stop.";
-    } else if (lower.includes("burn")) {
-      reply =
-        "Cool the burn under running water for 10–15 minutes. Do not apply ice or butter.";
-    } else if (lower.includes("choking")) {
-      reply =
-        "Perform back blows and abdominal thrusts. Call emergency services if needed.";
-    } else {
-      reply = `This is a simulated response to: "${prompt}" — actual AI integration coming soon!`;
-    }
+**Immediate Steps:**
+- [Step 1]
+- [Step 2]
+- [Step 3]"
+
+## Non-Emergency Response
+For non-urgent medical questions:
+**"This requires professional medical evaluation. Please consult a doctor or visit an urgent care center."**
+
+## Approved First-Aid Topics
+
+### Burns (Minor)
+- Cool under running water for 10-20 minutes
+- Remove jewelry/clothing from area before swelling
+- Cover loosely with sterile gauze
+- Do not use ice, butter, or ointments
+
+### Cuts and Wounds
+- Apply direct pressure with clean cloth
+- Elevate injured area above heart if possible
+- Clean gently with water once bleeding stops
+- Apply sterile bandage
+- Change bandage daily
+
+### Fainting
+- Check for responsiveness and breathing
+- Lay person flat on back
+- Elevate legs 8-12 inches
+- Loosen tight clothing
+- Stay with person until fully conscious
+
+### Choking (Conscious Adult)
+- Encourage coughing first
+- 5 back blows between shoulder blades
+- 5 abdominal thrusts (Heimlich maneuver)
+- Alternate until object dislodged or person unconscious
+
+### Nosebleeds
+- Sit upright, lean slightly forward
+- Pinch soft part of nose for 10-15 minutes
+- Apply ice pack to bridge of nose
+- Avoid tilting head back
+
+## Strict Prohibitions
+- No medical diagnosis
+- No medication recommendations
+- No dosage advice
+- No treatment for serious conditions
+- No speculation about causes
+- No advice beyond basic first aid
+
+## When to Always Direct to Emergency Services
+- Unconsciousness
+- Difficulty breathing
+- Severe bleeding
+- Chest pain
+- Signs of stroke
+- Severe burns
+- Head injuries
+- Poisoning
+- Severe allergic reactions
+
+## When to Direct to Medical Professional
+- Persistent symptoms
+- Medication questions
+- Chronic conditions
+- Follow-up care
+- Any situation requiring diagnosis
+Respond only with concise, actionable first-aid steps. If the situation is beyond your scope, direct to emergency services or a medical professional immediately. Do not provide any other information or engage in conversation outside of first aid guidance.
+`,
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 1000,
+      temperature: 0.3,
+      top_p: 0.9,
+    });
+
+    // Extract the reply from Groq response
+    const reply =
+      chatCompletion.choices[0]?.message?.content ||
+      "I apologize, but I cannot provide a response right now. Please try again.";
 
     return NextResponse.json({ reply });
   } catch (error) {
-    console.error("LLM simulation error:", error);
+    console.error("Groq API error:", error);
+
+    // Handle different types of errors
+    if (error instanceof Error) {
+      // Rate limit or API errors
+      if (
+        error.message.includes("rate limit") ||
+        error.message.includes("429")
+      ) {
+        return NextResponse.json(
+          {
+            reply:
+              "I'm receiving too many requests right now. Please wait a moment and try again.",
+          },
+          { status: 429 }
+        );
+      }
+
+      // API key or authentication errors
+      if (
+        error.message.includes("401") ||
+        error.message.includes("authentication")
+      ) {
+        return NextResponse.json(
+          { reply: "There's a configuration issue. Please contact support." },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: "Something went wrong processing your prompt." },
+      {
+        reply:
+          "I'm experiencing technical difficulties. Please try again in a moment. If this is a medical emergency, call emergency services immediately.",
+      },
       { status: 500 }
     );
   }
