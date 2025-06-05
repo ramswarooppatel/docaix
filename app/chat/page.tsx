@@ -60,6 +60,10 @@ const chat_page = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
@@ -73,6 +77,27 @@ const chat_page = () => {
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // Get user location on page load
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          console.log(
+            "Chat page has access to user location for enhanced responses"
+          );
+        },
+        (error) => {
+          console.log("Location access not available for chat");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -271,6 +296,38 @@ const chat_page = () => {
     event.target.value = "";
   };
 
+  const processLocationAwareMessage = (message: string) => {
+    // Check if the message is about finding hospitals or medical help
+    const hospitalKeywords = [
+      "hospital",
+      "emergency room",
+      "medical center",
+      "clinic",
+      "find hospitals",
+      "hospitals near me",
+      "nearest hospital",
+      "medical help",
+      "emergency medical",
+      "urgent care",
+    ];
+
+    const isHospitalQuery = hospitalKeywords.some((keyword) =>
+      message.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    if (isHospitalQuery && userLocation) {
+      // Enhance the message with location context
+      const enhancedMessage = `${message}\n\n[Note: User is located at coordinates ${userLocation.lat.toFixed(
+        6
+      )}, ${userLocation.lng.toFixed(
+        6
+      )} - please provide location-specific hospital recommendations if possible]`;
+      return enhancedMessage;
+    }
+
+    return message;
+  };
+
   const handleSend = async () => {
     // Check if we have an image to analyze
     if (selectedImage) {
@@ -342,6 +399,9 @@ const chat_page = () => {
     setIsLoading(true);
 
     try {
+      // Process the message for location awareness
+      const processedMessage = processLocationAwareMessage(currentInput);
+
       const response = await fetch(
         "https://firstaid-chat-bot-api.onrender.com/chat",
         {
@@ -352,6 +412,12 @@ const chat_page = () => {
           body: JSON.stringify({
             message: message,
             session_id: sessionId || undefined,
+            user_location: userLocation
+              ? {
+                  lat: userLocation.lat,
+                  lng: userLocation.lng,
+                }
+              : null,
           }),
         }
       );
@@ -416,7 +482,59 @@ const chat_page = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    await sendMessage(command.trim());
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(
+        "https://firstaid-chat-bot-api.onrender.com/chat",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: command,
+            session_id: sessionId || undefined,
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to get response from AI");
+
+      const data = await res.json();
+
+      // Update session ID if provided
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
+      }
+
+      // Parse the response to extract FAQs
+      const parsedResponse = parseResponseWithFAQ(
+        data.reply || "Sorry, I couldn't understand that."
+      );
+
+      const botMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot",
+        text: parsedResponse.mainContent,
+        timestamp: new Date(),
+        sessionId: data.session_id,
+        faqs: parsedResponse.faqs,
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error:", error);
+      const errorMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot",
+        text: "Sorry, I'm having trouble connecting. Please try again or use the emergency buttons if this is urgent.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -429,9 +547,9 @@ const chat_page = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-2 hover:bg-slate-100 transition-colors"
+                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-slate-100 transition-colors"
               >
-                <ArrowLeft className="w-4 h-4 text-slate-600" />
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 text-slate-600" />
               </Button>
             </Link>
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -439,77 +557,69 @@ const chat_page = () => {
             </div>
             <div className="min-w-0">
               <h1 className="font-bold text-lg sm:text-2xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-bold text-xs sm:text-sm lg:text-xl text-slate-800 truncate">
                 DOCai Assistant
+                {userLocation && (
+                  <span className="hidden sm:inline text-xs text-green-600 ml-2">
+                    📍 Location Active
+                  </span>
+                )}
               </h1>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <p className="text-sm text-slate-600 hidden sm:block">
-                  Emergency Medical Support
-                </p>
-              </div>
+              <p className="text-xs text-slate-600 hidden sm:block">
+                Emergency Medical Support
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 sm:gap-3">
             <Link href="/settings">
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-2 hover:bg-slate-100 transition-colors"
+                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-slate-100 transition-colors"
               >
-                <Settings className="w-4 h-4 text-slate-600" />
+                <Settings className="w-3 h-3 sm:w-4 sm:h-4 text-slate-600" />
               </Button>
             </Link>
-            <SignalIndicators className="scale-75 sm:scale-100" />
+            <SignalIndicators className="scale-75 sm:scale-90 lg:scale-100" />
           </div>
         </div>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-        <div className="w-full max-w-4xl mx-auto space-y-6">
+      {/* Chat Messages - Mobile optimized */}
+      <div className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+        <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center py-12 sm:py-20">
-              <div className="relative mb-8">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl">
-                  <Sparkles className="text-white w-8 h-8 sm:w-10 sm:h-10" />
-                </div>
-                <div className="absolute -inset-4 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-xl"></div>
+            <div className="text-center py-6 sm:py-12 lg:py-16 px-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+                <Sparkles className="text-white w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
+              <h2 className="text-2lg sm:text-xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
                 Welcome to DOCai
               </h2>
+              <p className="text-sm sm:text-base lg:text-lg font-medium mb-2">
               <p className="text-lg sm:text-xl font-semibold text-slate-700 mb-4">
                 Your AI Medical Assistant
+                {userLocation && (
+                  <span className="block text-xs sm:text-sm text-green-600 mt-1">
+                    📍 Location-aware assistance enabled
+                  </span>
+                )}
               </p>
-              <p className="text-slate-600 max-w-md mx-auto leading-relaxed mb-8">
+              <p className="text-xs sm:text-slate-600 max-w-xs sm:max-w-md mx-auto leading-relaxed mb-8">
                 I'm here to provide first aid guidance and emergency assistance.
                 Upload images of injuries for analysis or describe your
                 symptoms.
               </p>
-
-              {/* Feature Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 max-w-2xl mx-auto">
-                <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-2xl p-4 text-red-700 hover:shadow-lg transition-all duration-300">
-                  <Heart className="w-6 h-6 mx-auto mb-2" />
-                  <div className="font-semibold text-sm">Emergency Care</div>
-                  <div className="text-xs mt-1 text-red-600">
-                    Immediate assistance
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 max-w-lg mx-auto text-xs">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
+                  <Heart className="w-4 h-4 mx-auto mb-1" />
+                  <div className="font-semibold">Emergency Care</div>
                 </div>
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 text-blue-700 hover:shadow-lg transition-all duration-300">
-                  <Camera className="w-6 h-6 mx-auto mb-2" />
-                  <div className="font-semibold text-sm">Image Analysis</div>
-                  <div className="text-xs mt-1 text-blue-600">
-                    Upload injury photos
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-4 text-green-700 hover:shadow-lg transition-all duration-300">
-                  <Shield className="w-6 h-6 mx-auto mb-2" />
-                  <div className="font-semibold text-sm">Safety Tips</div>
-                  <div className="text-xs mt-1 text-green-600">
-                    Prevention advice
-                  </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 text-blue-700">
+                  <Stethoscope className="w-3 h-3 sm:w-4 sm:h-4 mx-auto mb-1" />
+                  <div className="font-semibold text-xs">First Aid Guide</div>
                 </div>
               </div>
 
@@ -538,12 +648,14 @@ const chat_page = () => {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex items-start gap-3 sm:gap-4 w-full ${
+                  className={`flex items-start gap-2 sm:gap-4 w-full ${
                     msg.sender === "user" ? "justify-end" : "justify-start"
                   } animate-in fade-in slide-in-from-bottom-4 duration-500`}
                 >
                   {/* Bot Avatar */}
                   {msg.sender === "bot" && (
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                      <Bot className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white">
                       <Bot className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
@@ -551,10 +663,10 @@ const chat_page = () => {
 
                   {/* Message Content */}
                   <div
-                    className={`max-w-[85%] sm:max-w-[75%] rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md ${
+                    className={`max-w-[90%] sm:max-w-[80%] rounded-2xl shadow-sm ${
                       msg.sender === "user"
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ml-auto px-5 py-4"
-                        : "bg-white text-slate-800 border border-slate-200/50 p-5"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white ml-auto px-4 py-3"
+                        : "bg-white text-slate-800 border border-slate-200 p-4"
                     }`}
                   >
                     {/* Image Display */}
@@ -570,7 +682,7 @@ const chat_page = () => {
                     )}
 
                     {msg.sender === "user" ? (
-                      <div className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                      <div className="text-xs sm:text-sm lg:text-base leading-relaxed whitespace-pre-wrap">
                         {msg.text}
                       </div>
                     ) : (
@@ -584,59 +696,56 @@ const chat_page = () => {
                         <FAQ faqs={msg.faqs} className="mt-4" />
                       )}
 
-                    {/* Message Footer */}
-                    <div className="flex items-center justify-between mt-4">
-                      <div
-                        className={`text-xs ${
-                          msg.sender === "user"
-                            ? "text-blue-100"
-                            : "text-slate-500"
-                        }`}
-                      >
-                        {msg.timestamp.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-
-                      {/* Voice Button for bot messages */}
-                      {msg.sender === "bot" && (
-                        <div className="flex items-center gap-2">
-                          <SpeakButton
-                            text={msg.text}
-                            className="text-xs text-slate-500 hover:text-indigo-600 transition-colors"
-                          />
-                        </div>
-                      )}
+                    {/* Timestamp */}
+                    <div
+                      className={`text-xs mt-3 ${
+                        msg.sender === "user"
+                          ? "text-blue-100"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </div>
+
+                    {/* Voice Button for bot messages */}
+                    {msg.sender === "bot" && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <SpeakButton
+                          text={msg.text}
+                          className="text-xs text-slate-500 hover:text-pink-600"
+                        />
+                        <span className="text-xs text-slate-400">
+                          Listen to DOCai
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* User Avatar */}
                   {msg.sender === "user" && (
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg bg-gradient-to-br from-slate-600 to-slate-700 text-white">
-                      <User className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-slate-600 to-slate-700 text-white">
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                     </div>
                   )}
                 </div>
               ))}
 
-              {/* Enhanced Loading State */}
-              {(isLoading || isAnalyzingImage) && (
-                <div className="flex items-start gap-3 sm:gap-4 w-full justify-start animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white">
-                    <Bot className="w-5 h-5 sm:w-6 sm:h-6" />
+              {/* Loading State */}
+              {isLoading && (
+                <div className="flex items-start gap-2 sm:gap-4 w-full justify-start">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                    <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <div className="bg-white text-slate-800 border border-slate-200/50 rounded-3xl px-5 py-4 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.1s]"></div>
-                        <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                      </div>
-                      <span className="text-sm text-slate-600">
-                        {isAnalyzingImage
-                          ? "Analyzing your injury image..."
-                          : "DOCai is analyzing your symptoms..."}
+                  <div className="bg-white text-slate-800 border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <span className="text-sm text-slate-600 ml-2">
+                        DOCai is analyzing...
                       </span>
                     </div>
                   </div>
@@ -648,9 +757,9 @@ const chat_page = () => {
         </div>
       </div>
 
-      {/* Enhanced Input Area */}
-      <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5">
-        <div className="w-full max-w-4xl mx-auto space-y-4">
+      {/* Input Area */}
+      <div className="bg-white border-t border-slate-200 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="w-full max-w-4xl mx-auto space-y-3">
           {/* Voice Animation */}
           {isVoiceListening && (
             <div className="flex justify-center">
@@ -696,32 +805,18 @@ const chat_page = () => {
           )}
 
           {/* Input Row */}
-          <div className="flex gap-3 items-end">
+          <div className="flex gap-2 sm:gap-3">
             <div className="flex-1 relative">
               <Input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && !e.shiftKey && handleSend()
-                }
-                placeholder={
-                  selectedImage
-                    ? "Describe your injury or symptoms (optional)..."
-                    : "Describe your symptoms, emergency, or upload an injury photo..."
-                }
-                disabled={isLoading || isAnalyzingImage}
-                className="h-12 sm:h-14 pr-24 sm:pr-28 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm"
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Describe your symptoms or emergency..."
+                disabled={isLoading}
+                className="h-10 sm:h-12 pr-12 sm:pr-16 rounded-lg sm:rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading || isAnalyzingImage}
-                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-                  title="Upload injury photo (JPG only)"
-                >
-                  <Camera className="w-4 h-4" />
-                </button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
                 <VoiceInput
                   onVoiceCommand={handleVoiceCommand}
                   onListeningChange={setIsVoiceListening}
@@ -736,32 +831,24 @@ const chat_page = () => {
                 (!input.trim() && !selectedImage)
               }
               size="lg"
-              className="h-12 sm:h-14 px-4 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              className="h-10 sm:h-12 px-3 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
-              {isLoading || isAnalyzingImage ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span className="hidden sm:inline text-sm mr-2">Send</span>
-                  <SendHorizonal className="w-5 h-5" />
+                  <span className="hidden sm:inline text-sm">Send</span>
+                  <SendHorizonal className="w-4 h-4 sm:ml-1" />
                 </>
               )}
             </Button>
           </div>
 
-          {/* Hidden File Input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/jpg,.jpg,.jpeg"
-            onChange={handleImageUpload}
-            className="hidden"
-            capture="environment"
-          />
-
-          {/* Emergency Actions */}
-          <div className="border-t border-slate-200/60 pt-4">
-            <EmergencyActions />
+          {/* Emergency Actions - Moved here */}
+          <div className="border-t border-slate-200 pt-3">
+            <div className="w-full">
+              <EmergencyActions />
+            </div>
           </div>
 
           {/* Emergency Warning */}

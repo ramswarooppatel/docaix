@@ -11,6 +11,9 @@ import {
   ExternalLink,
   Loader2,
   AlertCircle,
+  Shield,
+  Building2,
+  Globe,
 } from "lucide-react";
 
 interface Hospital {
@@ -26,11 +29,15 @@ interface Hospital {
     };
   };
   opening_hours?: {
-    open_now?: boolean;
+    open_now: boolean;
   };
   formatted_phone_number?: string;
   website?: string;
   types: string[];
+  distance_km?: number;
+  facility_type?: string;
+  emergency_services?: boolean;
+  operator?: string;
 }
 
 interface HospitalFinderProps {
@@ -45,6 +52,7 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{lat: number; lng: number} | null>(null);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  const [dataSource, setDataSource] = useState<string>("");
 
   // Get user's current location
   const getCurrentLocation = async (): Promise<{lat: number; lng: number}> => {
@@ -73,7 +81,7 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
     });
   };
 
-  // Find nearby hospitals using Google Places API
+  // Find nearby hospitals using OpenStreetMap Overpass API
   const findNearbyHospitals = async () => {
     setIsLoading(true);
     setError(null);
@@ -81,9 +89,10 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
     try {
       const location = await getCurrentLocation();
       
-      // Using Google Places API (you'll need to add your API key)
+      console.log(`Searching for hospitals near: ${location.lat}, ${location.lng}`);
+      
       const response = await fetch(
-        `/api/nearby-hospitals?lat=${location.lat}&lng=${location.lng}`
+        `/api/nearby-hospitals?lat=${location.lat}&lng=${location.lng}&radius=10000`
       );
 
       if (!response.ok) {
@@ -92,60 +101,24 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
 
       const data = await response.json();
       setHospitals(data.results || []);
+      setDataSource(data.source || "unknown");
+      
+      console.log(`Found ${data.results?.length || 0} hospitals from ${data.source}`);
+      
+      if (data.message) {
+        console.log('API Message:', data.message);
+      }
+      
     } catch (error) {
       console.error('Error finding hospitals:', error);
       setError(error instanceof Error ? error.message : 'Failed to find hospitals');
-      // Fallback: Set some demo hospitals for testing
-      setDemoHospitals();
+      setHospitals([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Demo hospitals for testing when API is not available
-  const setDemoHospitals = () => {
-    const demoHospitals: Hospital[] = [
-      {
-        place_id: "demo1",
-        name: "City General Hospital",
-        vicinity: "Main Street, Downtown",
-        rating: 4.2,
-        user_ratings_total: 156,
-        geometry: {
-          location: { lat: 0, lng: 0 }
-        },
-        opening_hours: { open_now: true },
-        types: ["hospital", "health"]
-      },
-      {
-        place_id: "demo2", 
-        name: "Emergency Medical Center",
-        vicinity: "Health Avenue, Medical District",
-        rating: 4.5,
-        user_ratings_total: 203,
-        geometry: {
-          location: { lat: 0, lng: 0 }
-        },
-        opening_hours: { open_now: true },
-        types: ["hospital", "emergency_room"]
-      },
-      {
-        place_id: "demo3",
-        name: "Regional Medical Hospital",
-        vicinity: "Hospital Road, Suburbs",
-        rating: 4.1,
-        user_ratings_total: 89,
-        geometry: {
-          location: { lat: 0, lng: 0 }
-        },
-        opening_hours: { open_now: false },
-        types: ["hospital", "health"]
-      }
-    ];
-    setHospitals(demoHospitals);
-  };
-
-  // Calculate distance between two points (rough estimate)
+  // Calculate distance between two points (fallback if not provided by API)
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): string => {
     const R = 6371; // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -176,7 +149,18 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
 
   // Call hospital
   const callHospital = (phone: string) => {
-    window.location.href = `tel:${phone}`;
+    // Clean phone number for calling
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    window.location.href = `tel:${cleanPhone}`;
+  };
+
+  // Open website
+  const openWebsite = (website: string) => {
+    let url = website;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`;
+    }
+    window.open(url, '_blank');
   };
 
   return (
@@ -186,6 +170,13 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-red-600" />
             <h2 className="text-lg sm:text-xl font-bold text-slate-800">Nearby Hospitals</h2>
+            {dataSource && (
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                {dataSource === "openstreetmap" ? "🗺️ OSM" : 
+                 dataSource === "demo_data" ? "📋 Demo" : 
+                 dataSource === "fallback_data" ? "⚠️ Fallback" : "📍 Live"}
+              </span>
+            )}
           </div>
           <Button
             onClick={findNearbyHospitals}
@@ -208,7 +199,7 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
         </div>
 
         <p className="text-sm text-slate-600 mb-4">
-          Find nearby hospitals and emergency medical centers based on your current location.
+          Find nearby hospitals and emergency medical centers using OpenStreetMap data.
         </p>
 
         {/* Error State */}
@@ -240,27 +231,45 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-slate-800 text-sm sm:text-base">
-                      {hospital.name}
-                    </h3>
-                    <p className="text-slate-600 text-xs sm:text-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-slate-800 text-sm sm:text-base">
+                        {hospital.name}
+                      </h3>
+                      {hospital.emergency_services && (
+                        <Shield className="w-4 h-4 text-red-600" title="Emergency Services Available" />
+                      )}
+                      {hospital.facility_type && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                          {hospital.facility_type}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 text-xs sm:text-sm mb-1">
                       {hospital.vicinity}
                     </p>
+                    {hospital.operator && (
+                      <p className="text-slate-500 text-xs flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        {hospital.operator}
+                      </p>
+                    )}
                   </div>
-                  {userLocation && (
+                  {(hospital.distance_km !== undefined || userLocation) && (
                     <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-                      {calculateDistance(
-                        userLocation.lat,
-                        userLocation.lng,
-                        hospital.geometry.location.lat,
-                        hospital.geometry.location.lng
-                      )}
+                      {hospital.distance_km !== undefined 
+                        ? `${hospital.distance_km}km`
+                        : calculateDistance(
+                            userLocation!.lat,
+                            userLocation!.lng,
+                            hospital.geometry.location.lat,
+                            hospital.geometry.location.lng
+                          )}
                     </span>
                   )}
                 </div>
 
                 {/* Hospital Info */}
-                <div className="flex items-center gap-4 mb-3 text-xs">
+                <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
                   {hospital.rating && (
                     <div className="flex items-center gap-1">
                       <Star className="w-3 h-3 text-yellow-500 fill-current" />
@@ -277,37 +286,58 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
                       </span>
                     </div>
                   )}
+                  {hospital.emergency_services && (
+                    <div className="flex items-center gap-1">
+                      <Shield className="w-3 h-3 text-red-600" />
+                      <span className="text-red-600 font-medium">24/7 Emergency</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     onClick={() => openDirections(hospital)}
                     size="sm"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    variant="outline"
+                    className="text-xs"
                   >
                     <Navigation className="w-3 h-3 mr-1" />
                     Directions
                   </Button>
+                  
                   {hospital.formatted_phone_number && (
                     <Button
                       onClick={() => callHospital(hospital.formatted_phone_number!)}
                       size="sm"
                       variant="outline"
-                      className="flex-1"
+                      className="text-xs text-green-600 border-green-200 hover:bg-green-50"
                     >
                       <Phone className="w-3 h-3 mr-1" />
                       Call
                     </Button>
                   )}
+                  
+                  {hospital.website && (
+                    <Button
+                      onClick={() => openWebsite(hospital.website!)}
+                      size="sm"
+                      variant="outline"
+                      className="text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                      <Globe className="w-3 h-3 mr-1" />
+                      Website
+                    </Button>
+                  )}
+                  
                   <Button
                     onClick={() => {
-                      const searchQuery = encodeURIComponent(hospital.name + ' ' + hospital.vicinity);
-                      window.open(`https://www.google.com/search?q=${searchQuery}`, '_blank');
+                      const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(hospital.name)}/@${hospital.geometry.location.lat},${hospital.geometry.location.lng},15z`;
+                      window.open(mapUrl, '_blank');
                     }}
                     size="sm"
-                    variant="ghost"
-                    className="p-2"
+                    variant="outline"
+                    className="text-xs"
                   >
                     <ExternalLink className="w-3 h-3" />
                   </Button>
@@ -321,7 +351,7 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
         {!isLoading && hospitals.length === 0 && !error && (
           <div className="text-center py-8 text-slate-500">
             <MapPin className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p className="text-sm">Click "Find Hospitals" to locate nearby medical facilities.</p>
+            <p className="text-sm">Click "Find Hospitals" to locate nearby medical facilities using OpenStreetMap data.</p>
           </div>
         )}
 
@@ -331,6 +361,15 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
             🚨 For life-threatening emergencies, call 108 or 112 immediately instead of traveling to a hospital.
           </p>
         </div>
+
+        {/* Data Source Info */}
+        {dataSource && (
+          <div className="mt-2 text-xs text-slate-500 text-center">
+            Data source: {dataSource === "openstreetmap" ? "OpenStreetMap via Overpass API" : 
+                         dataSource === "demo_data" ? "Demo data (no hospitals found in area)" :
+                         dataSource === "fallback_data" ? "Fallback data (API error)" : "Unknown"}
+          </div>
+        )}
       </div>
     </div>
   );

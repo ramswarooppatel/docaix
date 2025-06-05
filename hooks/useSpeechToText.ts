@@ -1,223 +1,220 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+"use client";
 
-interface SpeechRecognitionEvent extends Event {
-  readonly resultIndex: number;
-  readonly results: SpeechRecognitionResultList;
-}
+import { useState, useRef, useEffect, useCallback } from "react";
 
-interface SpeechRecognitionResultList {
-  [index: number]: SpeechRecognitionResult;
-  length: number;
-}
-
-interface SpeechRecognitionResult {
-  isFinal: boolean;
-  [index: number]: SpeechRecognitionAlternative;
-  length: number;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
 }
 
 export function useSpeechToText() {
-  const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const isProcessingRef = useRef(false);
+  const recognitionRef = useRef<any>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isProcessingRef = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Initialize recognition only once
+  // Detect mobile device
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const detectMobile = () => {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const mobileKeywords = ['mobile', 'android', 'iphone', 'ipad', 'ipod'];
+      return mobileKeywords.some(keyword => userAgent.includes(keyword)) || 
+             window.innerWidth <= 768 ||
+             'ontouchstart' in window;
+    };
 
-    const SpeechRecognitionAPI =
-      (window as any).webkitSpeechRecognition ||
-      (window as any).SpeechRecognition;
+    setIsMobile(detectMobile());
+  }, []);
 
-    if (!SpeechRecognitionAPI) {
-      setError("Speech recognition not supported in this browser.");
-      return;
-    }
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-    if (!recognitionRef.current) {
-      const recognition = new SpeechRecognitionAPI();
+    // Enhanced browser support detection for mobile
+    const SpeechRecognitionClass = 
+      window.SpeechRecognition || 
+      window.webkitSpeechRecognition;
 
-      // More permissive settings for better detection
-      recognition.continuous = true; // Keep listening for speech
-      recognition.interimResults = true; // Show interim results
+    if (SpeechRecognitionClass) {
+      const recognition = new SpeechRecognitionClass();
+      
+      // Mobile-optimized settings
+      recognition.continuous = false;
+      recognition.interimResults = false;
       recognition.lang = "en-US";
       recognition.maxAlternatives = 1;
+      
+      // Mobile-specific optimizations
+    
 
       recognition.onstart = () => {
-        console.log("Speech recognition started");
+        console.log("Speech recognition started on", isMobile ? "mobile" : "desktop");
         setIsListening(true);
-
-        // Longer timeout for better user experience
+        setError(null);
+        isProcessingRef.current = true;
+        
+        // Shorter timeout for mobile to save battery
+        const timeout = isMobile ? 20000 : 30000;
         timeoutRef.current = setTimeout(() => {
-          if (recognitionRef.current) {
+          if (recognitionRef.current && isProcessingRef.current) {
+            console.log("Speech recognition timeout - stopping");
             recognition.stop();
           }
-        }, 15000); // 15 seconds timeout
+        }, timeout);
       };
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
+      recognition.onresult = (event: any) => {
         console.log("Speech recognition result received");
-
-        if (isProcessingRef.current) return;
-
-        let finalTranscript = "";
-        let interimTranscript = "";
-
-        // Process all results
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          const transcript = result[0].transcript;
-
-          if (result.isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
-          }
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
         }
 
-        // If we have a final result, use it
-        if (finalTranscript.trim()) {
-          console.log("Final transcript:", finalTranscript);
-
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-
-          isProcessingRef.current = true;
-          setTranscript(finalTranscript.trim());
-          recognition.stop();
+        const transcript = event.results[0][0].transcript;
+        const confidence = event.results[0][0].confidence;
+        
+        console.log("Transcript:", transcript, "Confidence:", confidence);
+        
+        // Mobile devices often have lower confidence scores
+        const minConfidence = isMobile ? 0.3 : 0.5;
+        
+        if (confidence >= minConfidence) {
+          setTranscript(transcript);
+        } else {
+          console.warn("Low confidence transcript, using anyway on mobile:", transcript);
+          setTranscript(transcript); // Use anyway on mobile due to lower accuracy
         }
-        // Show interim results for user feedback
-        else if (interimTranscript.trim()) {
-          console.log("Interim transcript:", interimTranscript);
-          // Optionally show interim results (uncomment if needed)
-          // setTranscript(interimTranscript.trim());
-        }
+        
+        setIsListening(false);
+        isProcessingRef.current = false;
       };
 
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      recognition.onerror = (event: any) => {
         console.error("Speech recognition error:", event.error);
-
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
         }
 
         const errorType = event.error;
+        let errorMessage = "";
 
         switch (errorType) {
           case "no-speech":
-            console.log(
-              "No speech detected. Please try speaking louder or closer to the microphone."
-            );
-            setError("No speech detected. Please try again.");
+            errorMessage = isMobile ? "No speech detected. Try again." : "No speech detected. Please try again.";
             break;
           case "audio-capture":
-            setError(
-              "Microphone not accessible. Please check your microphone."
-            );
+            errorMessage = isMobile ? "Mic not accessible." : "Microphone not accessible. Please check your microphone.";
             break;
           case "not-allowed":
-            setError(
-              "Microphone access denied. Please allow microphone access and refresh the page."
-            );
+            errorMessage = isMobile ? "Mic access denied." : "Microphone access denied. Please allow microphone access and refresh the page.";
             break;
           case "network":
-            setError("Network error. Please check your connection.");
+            errorMessage = isMobile ? "Network error." : "Network error. Please check your connection.";
+            break;
+          case "aborted":
+            errorMessage = null; // Don't show error for manual cancellation
             break;
           default:
-            setError(`Recognition error: ${errorType}`);
+            errorMessage = isMobile ? `Error: ${errorType}` : `Recognition error: ${errorType}`;
         }
 
+        if (errorMessage) {
+          setError(errorMessage);
+        }
         setIsListening(false);
         isProcessingRef.current = false;
       };
 
       recognition.onend = () => {
         console.log("Speech recognition ended");
-
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
         }
-
         setIsListening(false);
         isProcessingRef.current = false;
       };
 
       recognitionRef.current = recognition;
+    } else {
+      console.error("Speech recognition not supported");
+      setError(isMobile ? "Voice not supported" : "Speech recognition not supported in this browser");
     }
 
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
     };
-  }, []); // Empty dependency array - run only once
+  }, [isMobile]);
 
   const startListening = useCallback(async () => {
     if (!recognitionRef.current || isListening) return;
 
     try {
-      // Request microphone permission explicitly
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop()); // Stop the stream, we just needed permission
+      // Enhanced permission request for mobile
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          ...(isMobile && {
+            sampleRate: 16000, // Lower sample rate for mobile
+            channelCount: 1     // Mono for mobile
+          })
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream.getTracks().forEach(track => track.stop());
 
       isProcessingRef.current = false;
       setError(null);
       setTranscript("");
-
-      console.log("Starting speech recognition...");
+      
+      console.log("Starting speech recognition on", isMobile ? "mobile device" : "desktop");
       recognitionRef.current.start();
     } catch (err) {
       console.error("Error accessing microphone:", err);
-      setError(
-        "Could not access microphone. Please ensure microphone permissions are granted."
-      );
+      const errorMessage = isMobile 
+        ? "Cannot access microphone. Check permissions." 
+        : "Could not access microphone. Please ensure microphone permissions are granted.";
+      setError(errorMessage);
       setIsListening(false);
     }
-  }, [isListening]);
+  }, [isListening, isMobile]);
 
   const stopListening = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-
+    
     if (recognitionRef.current && isListening) {
+      console.log("Stopping speech recognition");
       recognitionRef.current.stop();
     }
   }, [isListening]);
+
+  const cancelListening = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    if (recognitionRef.current) {
+      console.log("Cancelling speech recognition");
+      recognitionRef.current.abort();
+      setIsListening(false);
+      setTranscript("");
+      isProcessingRef.current = false;
+    }
+  }, []);
 
   return {
     transcript,
@@ -225,5 +222,8 @@ export function useSpeechToText() {
     error,
     startListening,
     stopListening,
+    cancelListening,
+    isSupported: !!recognitionRef.current,
+    isMobile
   };
 }
