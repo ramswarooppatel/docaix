@@ -37,6 +37,9 @@ const chat_page = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Add session management
+  const [sessionId, setSessionId] = useState<string>("");
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -85,23 +88,36 @@ const chat_page = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/chat_backend", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt: currentInput }),
-      });
+      // Replace with your Render URL
+      const res = await fetch(
+        "https://firstaid-chat-bot-api.onrender.com/chat", //Render URL
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: currentInput,
+            session_id: sessionId || undefined,
+          }),
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to get response from AI");
 
       const data = await res.json();
+
+      // Update session ID if provided
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
+      }
 
       const botMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "bot",
         text: data.reply || "Sorry, I couldn't understand that.",
         timestamp: new Date(),
+        sessionId: data.session_id,
       };
 
       setMessages((prev) => [...prev, botMessage]);
@@ -133,23 +149,35 @@ const chat_page = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/chat_backend", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt: command }),
-      });
+      const res = await fetch(
+        "https://firstaid-chat-bot-api.onrender.com/chat", //Render URL
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: command,
+            session_id: sessionId || undefined,
+          }),
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to get response from AI");
 
       const data = await res.json();
+
+      // Update session ID if provided
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
+      }
 
       const botMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "bot",
         text: data.reply || "Sorry, I couldn't understand that.",
         timestamp: new Date(),
+        sessionId: data.session_id,
       };
 
       setMessages((prev) => [...prev, botMessage]);
