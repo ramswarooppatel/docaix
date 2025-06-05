@@ -17,10 +17,11 @@ interface ChatMessage {
 const chat_page = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messageIdRef = useRef(0); // Add this line
+  const messageIdRef = useRef(0);
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,55 +49,64 @@ const chat_page = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
-      id: ++messageIdRef.current, // Use incremental ID instead of Date.now()
+      id: ++messageIdRef.current,
       sender: "user",
       text: input.trim(),
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input.trim();
     setInput("");
+    setIsLoading(true);
 
-    // Simulate bot response
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/llm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt: currentInput }),
+      });
+
+      if (!res.ok) throw new Error("Failed to get response from AI");
+
+      const data = await res.json();
+
       const botMessage: ChatMessage = {
-        id: ++messageIdRef.current, // Use incremental ID
+        id: ++messageIdRef.current,
         sender: "bot",
-        text: generateBotReply(input),
+        text: data.reply || "Sorry, I couldn't understand that.",
         timestamp: new Date(),
       };
+
       setMessages((prev) => [...prev, botMessage]);
-    }, 800); // simulate typing delay
-
-    console.log("User message sent:", userMessage.text);
-    console.log("Bot reply generated");
-  };
-  // Function to generate a bot reply based on user input(for demo purposes)
-  const generateBotReply = (input: string): string => {
-    const commonReplies = [
-      "Stay calm and call emergency services.",
-      "Apply pressure to the wound with a clean cloth.",
-      "Check for breathing and pulse.",
-      "Elevate the injured area if possible.",
-      "Rinse the burn with cool water for 10–15 minutes.",
-    ];
-
-    // For demo purposes: always return a random response
-    return commonReplies[Math.floor(Math.random() * commonReplies.length)];
+    } catch (error) {
+      console.error("Error generating response:", error);
+      const errorMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot",
+        text: "I'm having trouble processing your request. Please try again later.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Main content area */}
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto space-y-4">
           <h1 className="font-semibold text-3xl text-center text-gray-700 mb-6">
             First Aid Assistant
           </h1>
+
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-20">
               <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
@@ -129,7 +139,6 @@ const chat_page = () => {
                   )}
                 </div>
 
-                {/* Message bubble */}
                 <div
                   className={`px-4 py-3 rounded-xl ${
                     msg.sender === "user"
@@ -161,7 +170,6 @@ const chat_page = () => {
         </div>
       </div>
 
-      {/* Fixed input at bottom */}
       <div className="sticky bottom-0 bg-white/80 backdrop-blur-sm border-t border-gray-200 p-6">
         <div className="flex w-full max-w-4xl mx-auto items-center gap-3">
           <div className="flex-1 relative">
@@ -177,11 +185,9 @@ const chat_page = () => {
           </div>
 
           <VoiceInput
-            onVoiceCommand={(command) => {
-              console.log("Received voice command:", command);
-              setInput(command); // Set the input field
+            onVoiceCommand={async (command) => {
+              if (isLoading) return;
 
-              // Automatically send the message
               const userMessage: ChatMessage = {
                 id: ++messageIdRef.current,
                 sender: "user",
@@ -190,18 +196,41 @@ const chat_page = () => {
               };
 
               setMessages((prev) => [...prev, userMessage]);
-              setInput(""); // Clear input after sending
+              setIsLoading(true);
 
-              // Generate bot response
-              setTimeout(() => {
+              try {
+                const res = await fetch("/api/chat_backend", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ prompt: command }),
+                });
+
+                const data = await res.json();
+
                 const botMessage: ChatMessage = {
                   id: ++messageIdRef.current,
                   sender: "bot",
-                  text: generateBotReply(command),
+                  text: data.reply || "Sorry, I couldn't understand that.",
                   timestamp: new Date(),
                 };
+
                 setMessages((prev) => [...prev, botMessage]);
-              }, 800);
+              } catch (error) {
+                console.error("Voice input error:", error);
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: ++messageIdRef.current,
+                    sender: "bot",
+                    text: "Sorry, there was a problem processing your voice command.",
+                    timestamp: new Date(),
+                  },
+                ]);
+              } finally {
+                setIsLoading(false);
+              }
             }}
           />
           <Button
