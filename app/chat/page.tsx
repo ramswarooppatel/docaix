@@ -341,7 +341,23 @@ const chat_page = () => {
       return;
     }
 
-    await sendMessage(input.trim());
+    // Create and add user message first
+    const userMessage: ChatMessage = {
+      id: ++messageIdRef.current,
+      sender: "user",
+      text: input.trim(),
+      timestamp: new Date(),
+    };
+
+    console.log("💬 Adding user message:", userMessage);
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Store the input and clear it
+    const currentInput = input.trim();
+    setInput("");
+
+    // Send to API
+    await sendMessage(currentInput);
   };
 
   const handleSendWithImage = async () => {
@@ -357,13 +373,31 @@ const chat_page = () => {
       isAnalyzingImage,
     });
 
-    let messageText = input.trim();
+    // Create user message with image FIRST - before analysis
+    const userMessage: ChatMessage = {
+      id: ++messageIdRef.current,
+      sender: "user",
+      text: input.trim() || "Image uploaded for analysis",
+      timestamp: new Date(),
+      image: selectedImage || undefined,
+    };
+
+    console.log("💬 Adding user message with image:", userMessage);
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Store inputs and clear them
+    const currentInput = input.trim();
+    const currentImage = selectedImage;
+    setInput("");
+    setSelectedImage(null);
+
+    // Now analyze image and prepare message for API
+    let messageText = currentInput;
     let imageContext = "";
 
-    // Analyze image first if present
-    if (selectedImage) {
+    if (currentImage) {
       console.log("🔍 Analyzing image before sending...");
-      imageContext = await analyzeImage(selectedImage);
+      imageContext = await analyzeImage(currentImage);
       console.log("📋 Image analysis result:", imageContext);
 
       if (messageText) {
@@ -373,25 +407,8 @@ const chat_page = () => {
       }
     }
 
-    // Create user message with image
-    const userMessage: ChatMessage = {
-      id: ++messageIdRef.current,
-      sender: "user",
-      text: input.trim() || "Image uploaded for analysis",
-      timestamp: new Date(),
-      image: selectedImage || undefined,
-    };
-
-    console.log("💬 Adding user message:", userMessage);
-    setMessages((prev) => [...prev, userMessage]);
-
-    // Clear inputs
-    const currentInput = messageText;
-    setInput("");
-    setSelectedImage(null);
-
     // Send to chat API
-    await sendMessage(currentInput);
+    await sendMessage(messageText);
   };
 
   const sendMessage = async (message: string) => {
@@ -474,6 +491,7 @@ const chat_page = () => {
 
     console.log("🎤 Voice command received:", command);
 
+    // Create and show user message first
     const userMessage: ChatMessage = {
       id: ++messageIdRef.current,
       sender: "user",
@@ -482,6 +500,8 @@ const chat_page = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+
+    // Then send to API
     await sendMessage(command.trim());
   };
 
@@ -709,7 +729,42 @@ const chat_page = () => {
           {/* Voice Animation */}
           {isVoiceListening && (
             <div className="flex justify-center">
-              <VoiceWaveAnimation />
+              <VoiceWaveAnimation isActive={isVoiceListening} />
+            </div>
+          )}
+
+          {/* Image Preview */}
+          {selectedImage && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+              <div className="relative">
+                <img
+                  src={selectedImage}
+                  alt="Selected injury image"
+                  className="w-16 h-16 object-cover rounded-xl border border-blue-300"
+                />
+                <button
+                  onClick={() => setSelectedImage(null)}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                  title="Remove image"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-blue-900">
+                  Image ready for medical analysis
+                </p>
+                <p className="text-xs text-blue-600">
+                  This image will be analyzed for injury context and medical
+                  guidance
+                </p>
+              </div>
+              {isAnalyzingImage && (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs">Analyzing...</span>
+                </div>
+              )}
             </div>
           )}
 
