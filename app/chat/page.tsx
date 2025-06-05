@@ -67,6 +67,9 @@ const chat_page = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
 
+  // Add this state to track microphone permission
+  const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'unknown'>('unknown');
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -118,6 +121,26 @@ const chat_page = () => {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Check microphone permission on component mount
+  useEffect(() => {
+    const checkMicPermission = async () => {
+      try {
+        if (navigator.permissions) {
+          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          setMicPermission(result.state === 'granted' ? 'granted' : result.state === 'denied' ? 'denied' : 'unknown');
+          
+          result.addEventListener('change', () => {
+            setMicPermission(result.state === 'granted' ? 'granted' : result.state === 'denied' ? 'denied' : 'unknown');
+          });
+        }
+      } catch (error) {
+        console.log('Permission API not supported');
+      }
+    };
+    
+    checkMicPermission();
   }, []);
 
   const analyzeImage = async (imageBase64: string): Promise<string> => {
@@ -507,7 +530,7 @@ const chat_page = () => {
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      {/* Enhanced Header */}
+      {/* Enhanced Header with Voice Status */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5 z-10 shadow-sm">
         <div className="w-full max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -531,13 +554,32 @@ const chat_page = () => {
                     📍 Location Active
                   </span>
                 )}
+                {/* Voice Status in Header */}
+                {isVoiceListening && (
+                  <span className="inline-flex items-center gap-1 ml-2 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs animate-pulse">
+                    <Mic className="w-3 h-3" />
+                    Listening
+                  </span>
+                )}
               </h1>
               <p className="text-xs text-slate-600 hidden sm:block">
                 Emergency Medical Support
+                {isVoiceListening && (
+                  <span className="text-red-600 font-semibold ml-2">
+                    • Voice Active
+                  </span>
+                )}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Voice Status Icon in Header */}
+            {isVoiceListening && (
+              <div className="bg-red-100 border border-red-300 rounded-full p-2 animate-pulse">
+                <MicOff className="w-4 h-4 text-red-600" />
+              </div>
+            )}
+            
             <Link href="/settings">
               <Button
                 variant="ghost"
@@ -723,48 +765,49 @@ const chat_page = () => {
         </div>
       </div>
 
-      {/* Enhanced Input Area */}
+      {/* Enhanced Input Area with Voice Feedback */}
       <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5">
         <div className="w-full max-w-4xl mx-auto space-y-4">
-          {/* Voice Animation */}
+          {/* Voice Status Indicator */}
           {isVoiceListening && (
-            <div className="flex justify-center">
-              <VoiceWaveAnimation isActive={isVoiceListening} />
+            <div className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 rounded-2xl shadow-lg animate-pulse">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-md" />
+                <Mic className="h-6 w-6 text-red-600 animate-bounce" />
+                <span className="text-base font-bold text-red-700">
+                  🎤 LISTENING... SPEAK NOW
+                </span>
+              </div>
+              <VoiceWaveAnimation isActive={isVoiceListening} className="ml-4" />
+              
+              <Button
+                onClick={() => setIsVoiceListening(false)}
+                variant="outline"
+                size="sm"
+                className="ml-4 h-8 px-3 text-red-600 border-red-300 hover:bg-red-50 font-semibold"
+              >
+                <MicOff className="w-4 h-4 mr-1" />
+                STOP
+              </Button>
             </div>
           )}
 
-          {/* Image Preview */}
-          {selectedImage && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-2xl">
-              <div className="relative">
-                <img
-                  src={selectedImage}
-                  alt="Selected injury image"
-                  className="w-16 h-16 object-cover rounded-xl border border-blue-300"
-                />
-                <button
-                  onClick={() => setSelectedImage(null)}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                  title="Remove image"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-blue-900">
-                  Image ready for medical analysis
-                </p>
-                <p className="text-xs text-blue-600">
-                  This image will be analyzed for injury context and medical
-                  guidance
-                </p>
-              </div>
-              {isAnalyzingImage && (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs">Analyzing...</span>
-                </div>
-              )}
+          {/* Microphone Permission Status */}
+          {micPermission === 'denied' && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700">
+              <MicOff className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                Microphone access denied. Please enable microphone permissions to use voice input.
+              </span>
+            </div>
+          )}
+
+          {micPermission === 'granted' && !isVoiceListening && (
+            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700">
+              <Mic className="w-4 h-4" />
+              <span className="text-xs">
+                🎤 Voice input ready - Click the microphone button to start
+              </span>
             </div>
           )}
 
@@ -784,9 +827,9 @@ const chat_page = () => {
                     : "Describe your symptoms, emergency, or upload an injury photo..."
                 }
                 disabled={isLoading || isAnalyzingImage}
-                className="h-12 sm:h-14 pr-24 sm:pr-28 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm"
+                className="h-12 sm:h-14 pr-28 sm:pr-32 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading || isAnalyzingImage}
@@ -795,12 +838,28 @@ const chat_page = () => {
                 >
                   <Camera className="w-4 h-4" />
                 </button>
-                <VoiceInput
-                  onVoiceCommand={handleVoiceCommand}
-                  onListeningChange={setIsVoiceListening}
-                />
+                
+                {/* Voice Button with Status */}
+                <div className="relative">
+                  <VoiceInput
+                    onVoiceCommand={handleVoiceCommand}
+                    onListeningChange={setIsVoiceListening}
+                  />
+                  
+                  {/* Voice Status Overlay */}
+                  {isVoiceListening && (
+                    <div className="absolute -top-16 right-0 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold z-20 shadow-lg animate-bounce">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+                        🎤 LISTENING
+                      </div>
+                      <div className="absolute bottom-0 right-4 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-red-600"></div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            </div
+            
             <Button
               onClick={handleSend}
               disabled={
@@ -821,7 +880,7 @@ const chat_page = () => {
               )}
             </Button>
           </div>
-
+          
           {/* Hidden File Input */}
           <input
             ref={fileInputRef}
