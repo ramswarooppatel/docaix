@@ -31,7 +31,7 @@ const Home = () => {
             </div>
             <div>
               <h1 className="font-bold text-lg sm:text-2xl text-slate-800">
-                DOCai
+                DocAI
               </h1>
               <p className="text-xs sm:text-sm text-slate-600">
                 AI Medical Assistant
@@ -66,7 +66,7 @@ const Home = () => {
             </h1>
             <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
               Get instant first aid guidance, emergency assistance, and medical
-              support 24/7. DOCai is here to help you stay safe and handle
+              support 24/7. DocAI is here to help you stay safe and handle
               medical emergencies with confidence.
             </p>
 
@@ -106,8 +106,8 @@ const Home = () => {
                 Emergency Response
               </h3>
               <p className="text-slate-600 leading-relaxed">
-                Instant access to emergency services (108) and automatic alerts to
-                your emergency contacts with your location.
+                Instant access to emergency services (108) and automatic alerts
+                to your emergency contacts with your location.
               </p>
             </div>
 
@@ -120,8 +120,8 @@ const Home = () => {
                 First Aid Guidance
               </h3>
               <p className="text-slate-600 leading-relaxed">
-                Step-by-step first aid instructions for burns, cuts, choking, CPR,
-                and other medical emergencies.
+                Step-by-step first aid instructions for burns, cuts, choking,
+                CPR, and other medical emergencies.
               </p>
             </div>
 
@@ -148,8 +148,8 @@ const Home = () => {
                 Location Sharing
               </h3>
               <p className="text-slate-600 leading-relaxed">
-                Automatic location sharing with emergency contacts and services for
-                faster response times.
+                Automatic location sharing with emergency contacts and services
+                for faster response times.
               </p>
             </div>
 
@@ -162,8 +162,8 @@ const Home = () => {
                 Medical Knowledge
               </h3>
               <p className="text-slate-600 leading-relaxed">
-                Comprehensive medical database covering symptoms, treatments, and
-                emergency procedures.
+                Comprehensive medical database covering symptoms, treatments,
+                and emergency procedures.
               </p>
             </div>
 
@@ -176,8 +176,8 @@ const Home = () => {
                 Emergency Contacts
               </h3>
               <p className="text-slate-600 leading-relaxed">
-                Manage and alert your emergency contacts instantly during critical
-                situations.
+                Manage and alert your emergency contacts instantly during
+                critical situations.
               </p>
             </div>
           </div>
@@ -189,9 +189,9 @@ const Home = () => {
               🚨 Important Emergency Notice
             </h3>
             <p className="text-red-700 text-lg leading-relaxed max-w-3xl mx-auto">
-              DOCai provides first aid guidance and emergency assistance, but is not
-              a replacement for professional medical care. For life-threatening
-              emergencies, always call 108 immediately.
+              DocAI provides first aid guidance and emergency assistance, but is
+              not a replacement for professional medical care. For
+              life-threatening emergencies, always call 108 immediately.
             </p>
           </div>
 
@@ -201,7 +201,7 @@ const Home = () => {
               Ready to Get Started?
             </h2>
             <p className="text-lg text-slate-600 mb-8">
-              Join thousands who trust DOCai for emergency medical assistance.
+              Join thousands who trust DocAI for emergency medical assistance.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/chat">
@@ -210,7 +210,7 @@ const Home = () => {
                   className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <MessageCircle className="w-5 h-5 mr-3" />
-                  Start Using DOCai Now
+                  Start Using DocAI Now
                 </Button>
               </Link>
             </div>
@@ -222,8 +222,8 @@ const Home = () => {
       <div className="bg-white/50 border-t border-slate-200 px-3 sm:px-6 py-6">
         <div className="w-full max-w-6xl mx-auto text-center">
           <p className="text-sm text-slate-600">
-            © 2024 DOCai - AI-Powered Medical Assistant. Always consult healthcare
-            professionals for serious medical conditions.
+            © 2024 DocAI - AI-Powered Medical Assistant. Always consult
+            healthcare professionals for serious medical conditions.
           </p>
         </div>
       </div>

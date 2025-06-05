@@ -144,6 +144,7 @@ This message was sent automatically through the DOCai Emergency System.`;
         <Button
           onClick={callEmergencyServices}
           size="sm"
+          suppressHydrationWarning={true}
           className="w-full h-8 sm:h-9 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 text-xs sm:text-sm"
         >
           <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -155,6 +156,7 @@ This message was sent automatically through the DOCai Emergency System.`;
           onClick={sendEmergencyMessage}
           disabled={isGettingLocation}
           size="sm"
+          suppressHydrationWarning={true}
           className="w-full h-8 sm:h-9 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs sm:text-sm"
         >
           {isGettingLocation ? (
