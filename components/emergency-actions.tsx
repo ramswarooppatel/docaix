@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "../hooks/useSettings";
 import {
   Phone,
   MessageSquare,
@@ -23,6 +24,9 @@ interface EmergencyActionsProps {
 export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
   className = "",
 }) => {
+  const { getEmergencySettings } = useSettings();
+  const emergencySettings = getEmergencySettings();
+  
   const [location, setLocation] = useState<string>("Getting location...");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
@@ -170,9 +174,39 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
       window.open(fallbackURL, "_blank");
     }
   };
-
   // Send emergency message to all saved contacts
   const sendEmergencyMessage = async () => {
+    // Check if emergency contacts are required and none exist
+    if (emergencySettings.emergencyContactsRequired) {
+      const savedContacts = localStorage.getItem("emergencyContacts");
+      let currentContacts: EmergencyContact[] = [];
+      
+      if (savedContacts) {
+        try {
+          currentContacts = JSON.parse(savedContacts);
+        } catch (error) {
+          console.error('Error parsing emergency contacts:', error);
+        }
+      }
+
+      if (currentContacts.length === 0) {
+        alert(
+          "No emergency contacts found. Please add emergency contacts in Settings first."
+        );
+        return;
+      }
+    }
+
+    // SOS confirmation if enabled
+    if (emergencySettings.sosConfirmation) {
+      const confirmed = window.confirm(
+        "🚨 EMERGENCY ALERT\n\nAre you sure you want to send emergency messages to all your contacts?\n\nThis will immediately notify them of your emergency situation."
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     const savedContacts = localStorage.getItem("emergencyContacts");
     let currentContacts: EmergencyContact[] = [];
     
@@ -189,16 +223,21 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
         "No emergency contacts found. Please add emergency contacts in Settings first."
       );
       return;
-    }
+    }    let locationInfo = "Location not available";
+    
+    // Auto location sharing based on settings
+    if (emergencySettings.autoLocationShare) {
+      const currentLocationResult = await getCurrentLocation();
+      setLocation(currentLocationResult);
+      locationInfo = currentLocationResult;
 
-    const currentLocation = await getCurrentLocation();
-    setLocation(currentLocation);
-
-    // Include coordinates in emergency message if available
-    let locationInfo = currentLocation;
-    if (userCoordinates) {
-      const { lat, lng } = userCoordinates;
-      locationInfo = `${currentLocation}\n📍 GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}\n🗺️ Maps: https://www.google.com/maps?q=${lat},${lng}`;
+      // Include coordinates in emergency message if available
+      if (userCoordinates) {
+        const { lat, lng } = userCoordinates;
+        locationInfo = `${currentLocationResult}\n📍 GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}\n🗺️ Maps: https://www.google.com/maps?q=${lat},${lng}`;
+      }
+    } else {
+      locationInfo = "Location sharing disabled in settings";
     }
 
     const emergencyMessage = `🚨 EMERGENCY ALERT 🚨

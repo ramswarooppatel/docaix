@@ -437,7 +437,7 @@ const chat_page = () => {
           {/* Voice Animation */}
           {isVoiceListening && (
             <div className="flex justify-center">
-              <VoiceWaveAnimation />
+              <VoiceWaveAnimation isActive={true} />
             </div>
           )}
 

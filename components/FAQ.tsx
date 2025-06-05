@@ -91,8 +91,13 @@ export const FAQ: React.FC<FAQProps> = ({
                 )}
               </div>
             </button>
-            
-            {openItems.has(index) && (
+              <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                openItems.has(index) 
+                  ? 'max-h-96 opacity-100' 
+                  : 'max-h-0 opacity-0'
+              }`}
+            >
               <div className="px-4 pb-3 border-t border-blue-200 bg-white">
                 <div className="text-sm text-slate-700 leading-relaxed pt-3">
                   <div className="flex items-start gap-2">
@@ -101,7 +106,14 @@ export const FAQ: React.FC<FAQProps> = ({
                     </span>
                     <div className="flex-1">
                       {faq.answer.split('\n').map((line, lineIndex) => (
-                        <div key={lineIndex} className="mb-1">
+                        <div 
+                          key={lineIndex} 
+                          className={`mb-1 transition-all duration-300 ease-in-out delay-${Math.min(lineIndex * 50, 300)} ${
+                            openItems.has(index) 
+                              ? 'translate-y-0 opacity-100' 
+                              : 'translate-y-2 opacity-0'
+                          }`}
+                        >
                           {line.trim() && (
                             <span
                               dangerouslySetInnerHTML={{
@@ -119,7 +131,7 @@ export const FAQ: React.FC<FAQProps> = ({
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         ))}
       </div>

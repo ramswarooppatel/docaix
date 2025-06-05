@@ -243,3 +243,74 @@
     animation: none;
   }
 }
+
+/* High contrast mode styles */
+.high-contrast {
+  --background: #000000;
+  --foreground: #ffffff;
+  --border: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #333333;
+  --secondary-foreground: #ffffff;
+  --muted: #333333;
+  --muted-foreground: #ffffff;
+  --accent: #ffff00;
+  --accent-foreground: #000000;
+  --destructive: #ff0000;
+  --destructive-foreground: #ffffff;
+  --ring: #ffff00;
+  --input: #333333;
+}
+
+.high-contrast * {
+  border-color: #ffffff !important;
+}
+
+.high-contrast .bg-white {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.high-contrast .bg-gray-50,
+.high-contrast .bg-slate-50 {
+  background-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+.high-contrast .text-slate-600,
+.high-contrast .text-slate-700,
+.high-contrast .text-slate-800 {
+  color: #ffffff !important;
+}
+
+.high-contrast .border-slate-200,
+.high-contrast .border-gray-200 {
+  border-color: #ffffff !important;
+}
+
+/* Large buttons mode */
+.large-buttons button,
+.large-buttons .btn,
+.large-buttons .button {
+  min-height: 48px !important;
+  min-width: 48px !important;
+  padding: 12px 20px !important;
+  font-size: 16px !important;
+}
+
+.large-buttons input,
+.large-buttons select,
+.large-buttons textarea {
+  min-height: 48px !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important;
+}
+
+/* Animation duration override for reduced motion */
+:root[style*="--animation-duration"] * {
+  animation-duration: var(--animation-duration) !important;
+  transition-duration: var(--animation-duration) !important;
+}

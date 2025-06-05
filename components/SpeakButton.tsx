@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from './ui/button';
 import { Volume2, VolumeX, Pause, Play, Heart } from 'lucide-react';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
+import { useSettings } from '../hooks/useSettings';
 
 interface SpeakButtonProps {
   text: string;
@@ -16,6 +17,9 @@ const SpeakButton: React.FC<SpeakButtonProps> = ({
   className = "",
   size = "sm" 
 }) => {
+  const { getVoiceSettings } = useSettings();
+  const voiceSettings = getVoiceSettings();
+  
   const { 
     isSupported, 
     isSpeaking, 
@@ -25,9 +29,9 @@ const SpeakButton: React.FC<SpeakButtonProps> = ({
     pause, 
     resume 
   } = useTextToSpeech({
-    rate: 0.85,     // Slower, more natural pace
-    pitch: 1.2,     // Higher pitch for female voice
-    volume: 0.9     // Softer volume
+    rate: voiceSettings.rate,
+    pitch: voiceSettings.pitch,
+    volume: voiceSettings.volume
   });
 
   if (!isSupported) {

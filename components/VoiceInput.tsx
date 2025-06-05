@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useSpeechToText } from "../hooks/useSpeechToText";
+import { useSettings } from "../hooks/useSettings";
 import { useSound } from "../hooks/useSound";
 import { Mic, MicOff, X, MapPin, Smartphone } from "lucide-react";
 import { Button } from "./ui/button";
@@ -13,6 +14,9 @@ interface Props {
 }
 
 const VoiceInput: React.FC<Props> = ({ onVoiceCommand, onListeningChange, disabled = false }) => {
+  const { settings, getVoiceSettings } = useSettings();
+  const voiceSettings = getVoiceSettings();
+  
   const { transcript, isListening, startListening, cancelListening, error } = useSpeechToText();
   const lastProcessedTranscript = useRef("");
   const [timer, setTimer] = useState(0);
@@ -22,10 +26,11 @@ const VoiceInput: React.FC<Props> = ({ onVoiceCommand, onListeningChange, disabl
   const [isIOSDevice, setIsIOSDevice] = useState(false);
   const [micPermission, setMicPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   
-  // Enhanced sound effects with mobile-optimized volumes
-  const startSound = useSound('../assets/sound/ting.mp3', { volume: isMobile ? 0.3 : 0.6 });
-  const endSound = useSound('../assets/sound/ting.mp3', { volume: isMobile ? 0.2 : 0.4 });
-  const cancelSound = useSound('../assets/sound/ting.mp3', { volume: isMobile ? 0.1 : 0.3 });
+  // Enhanced sound effects with settings-based volumes
+  const volumeLevel = voiceSettings.volume * (isMobile ? 0.5 : 1);
+  const startSound = useSound('../assets/sound/ting.mp3', { volume: volumeLevel });
+  const endSound = useSound('../assets/sound/ting.mp3', { volume: volumeLevel * 0.7 });
+  const cancelSound = useSound('../assets/sound/ting.mp3', { volume: volumeLevel * 0.5 });
 
   // Detect mobile device and iOS specifically
   useEffect(() => {
@@ -134,7 +139,6 @@ const VoiceInput: React.FC<Props> = ({ onVoiceCommand, onListeningChange, disabl
       startSound.play();
     }
   }, [isListening, isMobile, startSound]);
-
   // Enhanced timer for mobile
   useEffect(() => {
     if (isListening) {
@@ -142,8 +146,9 @@ const VoiceInput: React.FC<Props> = ({ onVoiceCommand, onListeningChange, disabl
       timerRef.current = setInterval(() => {
         setTimer((prev) => {
           const newTime = prev + 1;
-          // Auto-stop after 30 seconds on mobile to save battery
-          if (isMobile && newTime >= 30) {
+          // Auto-stop after configured timeout (default 30 seconds on mobile to save battery)
+          const timeoutSeconds = voiceSettings.timeout / 1000;
+          if (newTime >= timeoutSeconds) {
             handleCancel();
             return prev;
           }
@@ -156,14 +161,12 @@ const VoiceInput: React.FC<Props> = ({ onVoiceCommand, onListeningChange, disabl
         timerRef.current = null;
       }
       setTimer(0);
-    }
-
-    return () => {
+    }    return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, [isListening, isMobile]);
+  }, [isListening, isMobile, voiceSettings.timeout]);
 
   // Notify parent of listening state changes
   useEffect(() => {
