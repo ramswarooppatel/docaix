@@ -36,6 +36,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     startListening,
     stopListening,
     cancelListening,
+    isSupported,
   } = useSpeechToText();
 
   // Enhanced sound effects
@@ -50,7 +51,6 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     volume: volumeLevel * 0.5
   });
 
-  // Check microphone permissions
   // Check microphone permissions
   useEffect(() => {
     const checkPermissions = async () => {
@@ -89,8 +89,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
         (position) => {
           setUserLocation({
             lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy
+            lng: position.coords.longitude
           });
           console.log("Voice input location acquired");
         },
@@ -135,14 +134,10 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     }
 
     return () => {
-    }
-
-    return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, [isListening]);
   }, [isListening]);
 
   // Notify parent component of listening state changes
@@ -150,7 +145,6 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     onListeningChange?.(isListening);
   }, [isListening, onListeningChange]);
 
-  // Enhanced voice command processing
   // Enhanced voice command processing
   useEffect(() => {
     if (transcript && !isListening && transcript !== lastProcessedTranscript.current && transcript.trim().length > 0) {
@@ -172,7 +166,6 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
       const isLocationCommand = locationCommands.some(cmd => 
         transcript.toLowerCase().includes(cmd.toLowerCase())
       );
-
 
       if (isLocationCommand && userLocation) {
         processedCommand = `${transcript} (Location: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)})`;
@@ -265,7 +258,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
                 : microphoneState === 'error' 
                   ? 'border-red-400 bg-red-50 text-red-700 ring-2 ring-red-200' 
                   : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:scale-105'
-        } hover:shadow-md disabled:opacity-50 touch-manipulation`}
+        } hover:shadow-md disabled:opacity-50`}
       >
         <Mic className={`h-3 w-3 transition-colors duration-300 ${
           isListening ? 'text-green-600' : 'text-gray-600'
