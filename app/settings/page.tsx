@@ -1,0 +1,332 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SignalIndicators } from "@/components/ui/signal-indicators";
+import { 
+  ArrowLeft, 
+  Plus, 
+  Trash2, 
+  Edit, 
+  Save, 
+  X, 
+  User, 
+  Phone, 
+  Settings as SettingsIcon,
+  Brain
+} from "lucide-react";
+import Link from "next/link";
+
+interface EmergencyContact {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+const SettingsPage = () => {
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  // Load contacts from localStorage on component mount
+  useEffect(() => {
+    const savedContacts = localStorage.getItem("emergencyContacts");
+    if (savedContacts) {
+      setContacts(JSON.parse(savedContacts));
+    }
+  }, []);
+
+  // Save contacts to localStorage whenever contacts change
+  useEffect(() => {
+    localStorage.setItem("emergencyContacts", JSON.stringify(contacts));
+  }, [contacts]);
+
+  const addContact = () => {
+    if (!newName.trim() || !newPhone.trim()) return;
+
+    const newContact: EmergencyContact = {
+      id: Date.now().toString(),
+      name: newName.trim(),
+      phone: newPhone.trim(),
+    };
+
+    setContacts([...contacts, newContact]);
+    setNewName("");
+    setNewPhone("");
+    setShowAddForm(false);
+  };
+
+  const deleteContact = (id: string) => {
+    setContacts(contacts.filter(contact => contact.id !== id));
+  };
+
+  const startEdit = (contact: EmergencyContact) => {
+    setEditingId(contact.id);
+    setEditName(contact.name);
+    setEditPhone(contact.phone);
+  };
+
+  const saveEdit = () => {
+    if (!editName.trim() || !editPhone.trim()) return;
+
+    setContacts(contacts.map(contact => 
+      contact.id === editingId 
+        ? { ...contact, name: editName.trim(), phone: editPhone.trim() }
+        : contact
+    ));
+    setEditingId(null);
+    setEditName("");
+    setEditPhone("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName("");
+    setEditPhone("");
+  };
+
+  const formatPhoneNumber = (phone: string) => {
+    // Simple phone number formatting
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header */}
+      <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
+        <div className="w-full max-w-4xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link href="/chat">
+              <Button variant="ghost" size="sm" className="p-2">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <SettingsIcon className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-bold text-sm sm:text-xl text-slate-800 truncate">
+                Settings
+              </h1>
+              <p className="text-xs text-slate-600 hidden sm:block">Emergency Contacts</p>
+            </div>
+          </div>
+          <div className="flex-shrink-0">
+            <SignalIndicators className="scale-75 sm:scale-100" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 px-3 sm:px-6 py-4 sm:py-6">
+        <div className="w-full max-w-2xl mx-auto space-y-6">
+          {/* Emergency Contacts Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-800">Emergency Contacts</h2>
+              <Button
+                onClick={() => setShowAddForm(true)}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Contact
+              </Button>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-6">
+              Add emergency contacts who will receive alerts when you use the emergency messaging feature.
+            </p>
+
+            {/* Add Contact Form */}
+            {showAddForm && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h3 className="font-semibold text-blue-800 mb-3">Add New Contact</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                    <Input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Contact name"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                    <Input
+                      type="tel"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value)}
+                      placeholder="+1234567890"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={addContact}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      disabled={!newName.trim() || !newPhone.trim()}
+                    >
+                      <Save className="w-4 h-4 mr-1" />
+                      Save Contact
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setNewName("");
+                        setNewPhone("");
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Contacts List */}
+            <div className="space-y-3">
+              {contacts.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <User className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p className="text-sm">No emergency contacts added yet.</p>
+                  <p className="text-xs mt-1">Add contacts to receive emergency alerts.</p>
+                </div>
+              ) : (
+                contacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200"
+                  >
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
+
+                    {editingId === contact.id ? (
+                      // Edit Mode
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Contact name"
+                          className="w-full h-8 text-sm"
+                        />
+                        <Input
+                          type="tel"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          placeholder="Phone number"
+                          className="w-full h-8 text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={saveEdit}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white h-7 px-2 text-xs"
+                            disabled={!editName.trim() || !editPhone.trim()}
+                          >
+                            <Save className="w-3 h-3 mr-1" />
+                            Save
+                          </Button>
+                          <Button
+                            onClick={cancelEdit}
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-800 truncate">{contact.name}</div>
+                          <div className="text-sm text-slate-600 flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {formatPhoneNumber(contact.phone)}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            onClick={() => startEdit(contact)}
+                            variant="ghost"
+                            size="sm"
+                            className="p-2 h-8 w-8 text-slate-600 hover:text-blue-600"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            onClick={() => deleteContact(contact.id)}
+                            variant="ghost"
+                            size="sm"
+                            className="p-2 h-8 w-8 text-slate-600 hover:text-red-600"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Additional Settings */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-4">App Settings</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div>
+                  <div className="font-medium text-slate-800">Location Services</div>
+                  <div className="text-sm text-slate-600">Enable location sharing for emergency alerts</div>
+                </div>
+                <div className="w-10 h-6 bg-blue-600 rounded-full relative">
+                  <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1 transition-all"></div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div>
+                  <div className="font-medium text-slate-800">Emergency Number</div>
+                  <div className="text-sm text-slate-600">Current: 108 (India Emergency Services)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Back to Chat */}
+          <div className="text-center">
+            <Link href="/chat">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Chat
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SettingsPage;
