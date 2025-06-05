@@ -133,7 +133,7 @@ const chat_page = () => {
                   }`}
                 >
                   {msg.sender === "user" ? (
-                    <User />
+                    <User className="w-4 h-4" />
                   ) : (
                     <Stethoscope className="w-4 h-4" />
                   )}
