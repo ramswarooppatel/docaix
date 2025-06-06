@@ -780,14 +780,14 @@ const ChatPage = () => {
           )}
 
           {/* Upload Success Notification */}
-          {micPermission === "granted" && !isVoiceListening && (
+          {/* {micPermission === "granted" && !isVoiceListening && (
             <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700">
               <Mic className="w-4 h-4" />
               <span className="text-xs">
                 🎤 Voice input ready - Click the microphone button to start
               </span>
             </div>
-          )}
+          )} */}
 
           {/* Input Row */}
           <div className="flex gap-3 items-end">
