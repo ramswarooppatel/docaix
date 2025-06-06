@@ -11,6 +11,8 @@ import {
   MessageCircle,
   SendHorizonal,
   Stethoscope,
+  CheckCircle,
+  RotateCcw,
   Bot,
   User,
   Sparkles,
@@ -394,15 +396,27 @@ const ChatPage = () => {
     const allowedTypes = ["image/jpeg", "image/jpg"];
     if (!allowedTypes.includes(file.type.toLowerCase())) {
       console.error("❌ Invalid file type:", file.type);
-      alert("Please select only JPG/JPEG image files");
+      // Enhanced error notification
+      const errorMsg = "Please select only JPG/JPEG image files";
+      alert(errorMsg);
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       console.error("❌ File too large:", file.size);
-      alert("Image size should be less than 5MB");
+      const errorMsg = "Image size should be less than 5MB";
+      alert(errorMsg);
       return;
     }
+
+    // Show loading state while processing
+    const loadingToast = document.createElement('div');
+    loadingToast.className = 'fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2';
+    loadingToast.innerHTML = `
+      <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+      <span>Processing image...</span>
+    `;
+    document.body.appendChild(loadingToast);
 
     const reader = new FileReader();
 
@@ -411,16 +425,49 @@ const ChatPage = () => {
 
       if (!base64 || typeof base64 !== "string") {
         console.error("❌ Invalid FileReader result");
+        document.body.removeChild(loadingToast);
         alert("Failed to read the image file. Please try again.");
         return;
       }
 
       console.log("✅ Image loaded successfully");
       setSelectedImage(base64);
+      
+      // Remove loading toast and show success
+      document.body.removeChild(loadingToast);
+      
+      // Show success notification
+      const successToast = document.createElement('div');
+      successToast.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-in slide-in-from-right duration-300';
+      successToast.innerHTML = `
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+        <span>Image ready for analysis!</span>
+      `;
+      document.body.appendChild(successToast);
+      
+      // Auto-remove success toast after 3 seconds
+      setTimeout(() => {
+        if (document.body.contains(successToast)) {
+          successToast.style.animation = 'slide-out-to-right 0.3s ease-in-out';
+          setTimeout(() => {
+            if (document.body.contains(successToast)) {
+              document.body.removeChild(successToast);
+            }
+          }, 300);
+        }
+      }, 3000);
+
+      // Focus input field for optional description
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     };
 
     reader.onerror = () => {
       console.error("❌ FileReader error");
+      document.body.removeChild(loadingToast);
       alert("Failed to read the image file. Please try again.");
     };
 
@@ -649,9 +696,76 @@ const ChatPage = () => {
         </div>
       </div>
 
-      {/* Enhanced Input Area with Voice Feedback */}
+      {/* Enhanced Input Area with Visual Feedback */}
       <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5">
         <div className="w-full max-w-4xl mx-auto space-y-4">
+          
+          {/* Image Preview Section - NEW */}
+          {selectedImage && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-start gap-4">
+                {/* Image Preview */}
+                <div className="relative">
+                  <img
+                    src={selectedImage}
+                    alt="Selected injury photo"
+                    className="w-24 h-24 object-cover rounded-xl border-2 border-green-300 shadow-lg"
+                  />
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                
+                {/* Image Info and Actions */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Camera className="w-5 h-5 text-green-600" />
+                    <h3 className="font-semibold text-green-800">Image Ready to Send</h3>
+                    <div className="px-2 py-1 bg-green-200 text-green-700 text-xs rounded-full font-medium">
+                      JPG
+                    </div>
+                  </div>
+                  <p className="text-sm text-green-700 mb-3">
+                    📸 Your injury photo has been selected and will be analyzed by DOCai for medical guidance.
+                  </p>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setSelectedImage(null)}
+                      size="sm"
+                      variant="outline"
+                      className="border-green-300 text-green-700 hover:bg-green-100"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Remove
+                    </Button>
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      size="sm"
+                      variant="outline"
+                      className="border-green-300 text-green-700 hover:bg-green-100"
+                    >
+                      <RotateCcw className="w-3 h-3 mr-1" />
+                      Replace
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Progress Bar Animation */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Ready for AI analysis</span>
+                </div>
+                <div className="w-full bg-green-200 rounded-full h-2">
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full w-full animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Voice Status Indicator */}
           {isVoiceListening && (
             <div className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 rounded-2xl shadow-lg animate-pulse">
@@ -662,34 +776,10 @@ const ChatPage = () => {
                   🎤 LISTENING... SPEAK NOW
                 </span>
               </div>
-              <VoiceWaveAnimation
-                isActive={isVoiceListening}
-                className="ml-4"
-              />
-
-              <Button
-                onClick={() => setIsVoiceListening(false)}
-                variant="outline"
-                size="sm"
-                className="ml-4 h-8 px-3 text-red-600 border-red-300 hover:bg-red-50 font-semibold"
-              >
-                <MicOff className="w-4 h-4 mr-1" />
-                STOP
-              </Button>
             </div>
           )}
 
-          {/* Microphone Permission Status */}
-          {micPermission === "denied" && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700">
-              <MicOff className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                Microphone access denied. Please enable microphone permissions
-                to use voice input.
-              </span>
-            </div>
-          )}
-
+          {/* Upload Success Notification */}
           {micPermission === "granted" && !isVoiceListening && (
             <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700">
               <Mic className="w-4 h-4" />
@@ -715,16 +805,20 @@ const ChatPage = () => {
                     : "Describe your symptoms, emergency, or upload an injury photo..."
                 }
                 disabled={isLoading || isAnalyzingImage}
-                className="h-12 sm:h-14 pr-28 sm:pr-32 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm"
+                className={`h-12 sm:h-14 pr-28 sm:pr-32 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm ${
+                  selectedImage ? 'border-green-300 focus:border-green-500 bg-green-50/30' : ''
+                }`}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading || isAnalyzingImage}
-                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                  className={`p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 ${
+                    selectedImage ? 'text-green-600 bg-green-100' : ''
+                  }`}
                   title="Upload injury photo (JPG only)"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className={`w-4 h-4 ${selectedImage ? 'animate-pulse' : ''}`} />
                 </button>
 
                 {/* Voice Button with Status */}
@@ -756,13 +850,17 @@ const ChatPage = () => {
                 (!input.trim() && !selectedImage)
               }
               size="lg"
-              className="h-12 sm:h-14 px-4 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              className={`h-12 sm:h-14 px-4 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
+                selectedImage ? 'from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : ''
+              }`}
             >
               {isLoading || isAnalyzingImage ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span className="hidden sm:inline text-sm mr-2">Send</span>
+                  <span className="hidden sm:inline text-sm mr-2">
+                    {selectedImage ? 'Analyze' : 'Send'}
+                  </span>
                   <SendHorizonal className="w-5 h-5" />
                 </>
               )}
