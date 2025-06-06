@@ -122,7 +122,7 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
     window.location.href = "tel:112";
   };
 
-  // Open hospitals with user's real location - now uses the new hospital finder
+  // Update the hospital search function to redirect to the hospitals page
   const findNearbyHospitals = async () => {
     try {
       let coordinates = userCoordinates;
@@ -136,34 +136,10 @@ export const EmergencyActions: React.FC<EmergencyActionsProps> = ({
       }
 
       if (coordinates) {
-        // Build Google Maps URL with user's real coordinates
-        const { lat, lng } = coordinates;
-        
-        // Try to use our improved hospital search first
-        try {
-          const response = await fetch(`/api/nearby-hospitals?lat=${lat}&lng=${lng}&radius=10000`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.results && data.results.length > 0) {
-              // Open Google Maps with the nearest hospital
-              const nearestHospital = data.results[0];
-              const hospitalMapsURL = `https://www.google.com/maps/dir/${lat},${lng}/${nearestHospital.geometry.location.lat},${nearestHospital.geometry.location.lng}`;
-              console.log(`Opening directions to nearest hospital: ${nearestHospital.name}`);
-              window.open(hospitalMapsURL, "_blank");
-              return;
-            }
-          }
-        } catch (error) {
-          console.log("Hospital search API failed, falling back to generic search");
-        }
-        
-        // Fallback to generic hospital search
-        const googleMapsURL = `https://www.google.com/maps/search/hospitals+near+me/@${lat},${lng},15z/data=!3m1!4b1?entry=ttu&g_ep=EgoyMDI1MDYwMy4wIKXMDSoASAFQAw%3D%3D`;
-        console.log(`Opening hospitals near: ${lat}, ${lng}`);
-        window.open(googleMapsURL, "_blank");
+        // Redirect to the hospitals page instead of opening Google Maps
+        window.location.href = '/hospitals';
       } else {
-        // Fallback to generic search if location is not available
-        console.log("Location not available, using fallback URL");
+        // Fallback to generic hospital search
         const fallbackURL = "https://maps.app.goo.gl/NHbFRyMVtQGV1DbM7";
         window.open(fallbackURL, "_blank");
       }

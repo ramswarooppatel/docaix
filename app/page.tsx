@@ -16,6 +16,8 @@ import {
   Users,
   ArrowRight,
   Sparkles,
+  Activity,
+  Building2, // Add this import
 } from "lucide-react";
 import Link from "next/link";
 
@@ -82,6 +84,31 @@ const Home = () => {
                   <ArrowRight className="w-5 h-5 ml-3" />
                 </Button>
               </Link>
+              
+              {/* Add Hospitals Button */}
+              <Link href="/hospitals">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200"
+                >
+                  <Building2 className="w-5 h-5 mr-3" />
+                  Find Nearby Hospitals
+                </Button>
+              </Link>
+              
+              {/* Health Profile Button */}
+              <Link href="/healthprofile">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200"
+                >
+                  <Activity className="w-5 h-5 mr-3" />
+                  Health Profile Analysis
+                </Button>
+              </Link>
+              
               <Link href="/settings">
                 <Button
                   variant="outline"
@@ -111,10 +138,36 @@ const Home = () => {
               </p>
             </div>
 
-            {/* First Aid Guidance */}
+            {/* Nearby Hospitals - NEW */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
+                <Building2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                Nearby Hospitals
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Find hospitals, clinics, and emergency centers near your location with directions and contact information.
+              </p>
+            </div>
+
+            {/* Health Profile Analysis */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
-                <Heart className="w-6 h-6 text-green-600" />
+                <Activity className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                Health Profile Analysis
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Get personalized health recommendations based on your medical profile, lifestyle, and conditions.
+              </p>
+            </div>
+
+            {/* First Aid Guidance */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <Heart className="w-6 h-6 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-slate-800 mb-3">
                 First Aid Guidance
@@ -197,12 +250,6 @@ const Home = () => {
 
           {/* Bottom CTA */}
           <div className="text-center mt-12 sm:mt-16">
-            {/* <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-4">
-              Ready to Get Started?
-            </h2>
-            <p className="text-lg text-slate-600 mb-8">
-              Join thousands who trust DocAI for emergency medical assistance.
-            </p> */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/chat">
                 <Button
@@ -211,6 +258,30 @@ const Home = () => {
                 >
                   <MessageCircle className="w-5 h-5 mr-3" />
                   Start Using DocAI Now
+                </Button>
+              </Link>
+              
+              {/* Add Hospitals CTA */}
+              <Link href="/hospitals">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200"
+                >
+                  <Building2 className="w-5 h-5 mr-3" />
+                  Find Hospitals
+                </Button>
+              </Link>
+              
+              {/* Health Profile CTA */}
+              <Link href="/healthprofile">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200"
+                >
+                  <Activity className="w-5 h-5 mr-3" />
+                  Analyze Health Profile
                 </Button>
               </Link>
             </div>

@@ -25,6 +25,7 @@ import {
   Zap,
   Shield,
   Activity,
+  Building2, // Add this import
   Camera,
   Image as ImageIcon,
   X,
@@ -476,10 +477,10 @@ const ChatPage = () => {
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      {/* Enhanced Header with Voice Status */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5 z-10 shadow-sm">
+      {/* Header */}
+      <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
         <div className="w-full max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/">
               <Button
                 variant="ghost"
@@ -489,10 +490,10 @@ const ChatPage = () => {
                 <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 text-slate-600" />
               </Button>
             </Link>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
-              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+              <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <h1 className="font-bold text-xs sm:text-sm lg:text-xl text-slate-800 truncate">
                 DOCai Assistant
                 {userLocation && (
@@ -523,6 +524,30 @@ const ChatPage = () => {
                 <MicOff className="w-4 h-4 text-red-600" />
               </div>
             )}
+
+            {/* Add Hospitals Button */}
+            <Link href="/hospitals">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-red-100 transition-colors"
+                title="Find Nearby Hospitals"
+              >
+                <Building2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+              </Button>
+            </Link>
+
+            {/* Health Profile Button */}
+            <Link href="/healthprofile">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-green-100 transition-colors"
+                title="Health Profile Analysis"
+              >
+                <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+              </Button>
+            </Link>
 
             <Link href="/settings">
               <Button
@@ -582,6 +607,28 @@ const ChatPage = () => {
                   <Camera className="w-4 h-4 mr-2" />
                   Upload Injury Photo
                 </Button>
+                
+                {/* Add Hospitals Quick Action */}
+                <Link href="/hospitals">
+                  <Button
+                    variant="outline"
+                    className="rounded-full px-4 py-2 text-sm hover:bg-red-50 hover:border-red-300 transition-all"
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Find Hospitals
+                  </Button>
+                </Link>
+                
+                {/* Health Profile Quick Action */}
+                <Link href="/healthprofile">
+                  <Button
+                    variant="outline"
+                    className="rounded-full px-4 py-2 text-sm hover:bg-purple-50 hover:border-purple-300 transition-all"
+                  >
+                    <Heart className="w-4 h-4 mr-2" />
+                    Health Analysis
+                  </Button>
+                </Link>
               </div>
             </div>
           ) : (

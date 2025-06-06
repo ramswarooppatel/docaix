@@ -35,7 +35,8 @@ import {
   Info,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Building2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -1175,6 +1176,54 @@ const SettingsPage = () => {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Health Profile Data */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                      <div>
+                        <h3 className="font-semibold text-slate-800">Health Profile Data</h3>
+                        <p className="text-sm text-slate-600">Manage your saved health profile analysis</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            const profile = localStorage.getItem('healthProfile');
+                            if (profile) {
+                              const blob = new Blob([profile], { type: 'application/json' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `health-profile-${new Date().toISOString().split('T')[0]}.json`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            } else {
+                              alert('No health profile data found.');
+                            }
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Export
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete your health profile data?')) {
+                              localStorage.removeItem('healthProfile');
+                              window.dispatchEvent(new CustomEvent('healthProfileUpdated', { detail: null }));
+                              alert('Health profile data cleared.');
+                            }
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash className="w-4 h-4 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1258,35 +1307,68 @@ const SettingsPage = () => {
                     </label>
                   </div>
                 </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Hospitals Tab */}
-              {activeTab === 'hospitals' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
-                    <div className="flex items-center gap-2 mb-6">
-                      <MapPin className="w-5 h-5 text-red-600" />
-                      <h2 className="text-lg sm:text-xl font-bold text-slate-800">Nearby Hospitals</h2>
-                    </div>
-                    
-                    <div className="text-center py-6">
-                      <Button onClick={openHospitalMaps} className="bg-blue-600 hover:bg-blue-700">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        Find Nearby Hospitals
-                      </Button>
-                      <p className="text-sm text-slate-600 mt-3">
-                        Opens Google Maps with nearby hospitals
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Hospitals Tab */}
+          {activeTab === 'hospitals' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Building2 className="w-6 h-6 text-red-600" />
+                  <h2 className="text-xl font-bold text-slate-800">Hospital Finder</h2>
+                </div>
+                
+                <div className="text-center py-8 space-y-4">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Building2 className="w-8 h-8 text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-700">Find Nearby Medical Facilities</h3>
+                  <p className="text-slate-600 max-w-md mx-auto">
+                    Discover hospitals, clinics, and emergency centers in your area with contact information and directions.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+                    <Link href="/hospitals">
+                      <Button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3">
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Open Hospital Finder
+                      </Button>
+                    </Link>
+                    
+                    <Button 
+                      onClick={() => {
+                        const url = "https://www.google.com/maps/search/hospitals+near+me";
+                        window.open(url, '_blank');
+                      }}
+                      variant="outline"
+                      className="border-red-300 text-red-600 hover:bg-red-50 px-6 py-3"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Google Maps
+                    </Button>
+                  </div>
+                  
+                  <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <Shield className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-left">
+                        <h4 className="font-semibold text-red-800 mb-1">Emergency Notice</h4>
+                        <p className="text-sm text-red-700">
+                          For life-threatening emergencies, call 108 or 112 immediately instead of searching for hospitals.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      );
-    };
-    
-    export default SettingsPage;
+      </div>
+    </div>
+  );
+};
+
+export default SettingsPage;
