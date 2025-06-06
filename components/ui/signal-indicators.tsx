@@ -7,6 +7,11 @@ interface SignalIndicatorsProps {
   className?: string;
 }
 
+// Extend Navigator interface to include experimental APIs
+interface NavigatorWithDeviceMemory extends Navigator {
+  deviceMemory?: number;
+}
+
 interface DeviceInfo {
   batteryLevel: number;
   batteryCharging: boolean;
@@ -110,16 +115,24 @@ export const SignalIndicators: React.FC<SignalIndicatorsProps> = ({
             connectionSpeed: `${speeds[Math.floor(Math.random() * speeds.length)]} Mbps`,
           }));
         }
+        
+        // Device memory
+        if ('deviceMemory' in navigator) {
+          const navigatorWithMemory = navigator as NavigatorWithDeviceMemory;
+          setDeviceInfo(prev => ({
+            ...prev,
+            deviceMemory: navigatorWithMemory.deviceMemory,
+          }));
+        }
       } catch (error) {
-        console.log('Connection API not supported');
-      }
-
-      // @ts-ignore - Device memory
-      if ('deviceMemory' in navigator) {
-        // @ts-ignore
+        console.log('Network API not supported');
+        // Provide fallback network information
+        const networkTypes = ['4g', '5g', 'wifi'];
+        const speeds = ['25.4', '47.2', '156.8', '89.3'];
         setDeviceInfo(prev => ({
           ...prev,
-          deviceMemory: navigator.deviceMemory,
+          networkType: networkTypes[Math.floor(Math.random() * networkTypes.length)],
+          connectionSpeed: `${speeds[Math.floor(Math.random() * speeds.length)]} Mbps`,
         }));
       }
     };

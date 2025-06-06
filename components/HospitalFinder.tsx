@@ -236,7 +236,9 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({
                         {hospital.name}
                       </h3>
                       {hospital.emergency_services && (
-                        <Shield className="w-4 h-4 text-red-600" title="Emergency Services Available" />
+                        <span title="Emergency Services Available">
+                          <Shield className="w-4 h-4 text-red-600" />
+                        </span>
                       )}
                       {hospital.facility_type && (
                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
