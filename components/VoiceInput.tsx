@@ -454,13 +454,6 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
           </div>
         </div>
       )}
-
-      {/* Mobile-specific help text */}
-      {isMobile && micPermission === "unknown" && !isListening && (
-        <div className="absolute top-full right-0 mt-1 text-xs text-gray-500 bg-white border border-gray-200 rounded px-2 py-1 shadow-sm whitespace-nowrap">
-          👆 Touch to enable voice
-        </div>
-      )}
     </div>
   );
 };

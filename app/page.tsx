@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { SignalIndicators } from "@/components/ui/signal-indicators";
+import { SignalIndicators } from "@/components/signal-indicators";
 import {
   MessageCircle,
   Settings,

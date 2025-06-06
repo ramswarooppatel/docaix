@@ -7,7 +7,6 @@ import { SignalIndicators } from "@/components/signal-indicators";
 import { EmergencyActions } from "@/components/emergency-actions";
 import { FAQ } from "@/components/FAQ";
 import { EnhancedMessageDisplay } from "@/components/EnhancedMessageDisplay";
-import { parseResponseWithFAQ } from "@/lib/parseFAQ";
 import {
   MessageCircle,
   SendHorizonal,
@@ -45,7 +44,13 @@ interface ChatMessage {
   text: string;
   timestamp: Date;
   sessionId?: string;
-  faqs?: FAQItem[];
+  structuredData?: {
+    header?: string;
+    emergency?: string;
+    steps?: string[];
+    doctorAdvice?: string[];
+    faqs?: Array<{ question: string; answer: string }>;
+  };
   image?: string;
 }
 
@@ -158,11 +163,11 @@ const ChatPage = () => {
     await sendMessage(command.trim());
   };
 
-  const sendMessage = async (message: string) => {
-    console.log("📤 Sending message to chat API:", message);
-    setIsLoading(true);
-
+  const sendMessage = async (userInput: string) => {
     try {
+      setIsLoading(true);
+
+      // Step 1: Get response from your API
       const response = await fetch(
         "https://firstaid-chat-bot-api.onrender.com/chat",
         {
@@ -171,7 +176,7 @@ const ChatPage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            message: message,
+            message: userInput,
             session_id: sessionId || undefined,
             user_location: userLocation
               ? {
@@ -184,40 +189,44 @@ const ChatPage = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`Chat API failed: ${response.status}`);
+        throw new Error(`API request failed with status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("✅ Chat response data:", data);
+      const aiResponseText = data.reply;
 
-      if (data.session_id && !sessionId) {
-        setSessionId(data.session_id);
-        console.log("🆔 Session ID updated:", data.session_id);
+      // Step 2: Process through structured JSON API
+      const jsonResponse = await fetch("/api/json", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: aiResponseText }),
+      });
+
+      if (!jsonResponse.ok) {
+        throw new Error(
+          `JSON processing failed with status: ${jsonResponse.status}`
+        );
       }
 
-      const parsedResponse = parseResponseWithFAQ(
-        data.reply || "Sorry, I couldn't understand that."
-      );
+      const structuredData = await jsonResponse.json();
+      console.log("Structured data from API:", structuredData);
 
-      const botMessage: ChatMessage = {
-        id: ++messageIdRef.current,
-        sender: "bot",
-        text: parsedResponse.mainContent,
+      // Use the ref counter instead of Date.now()
+      const botMessage = {
+        id: ++messageIdRef.current, // ✅ Use counter instead of Date.now()
+        sender: "bot" as const,
+        text: aiResponseText,
         timestamp: new Date(),
+        structuredData: structuredData,
         sessionId: data.session_id,
-        faqs: parsedResponse.faqs,
       };
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error("❌ Chat API error:", error);
-      const errorMessage: ChatMessage = {
-        id: ++messageIdRef.current,
-        sender: "bot",
-        text: "Sorry, I'm having trouble connecting to the medical assistance service. Please try again or use the emergency buttons if this is urgent.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      console.error("Error processing message:", error);
+      // Display error to user
     } finally {
       setIsLoading(false);
     }
@@ -570,17 +579,11 @@ const ChatPage = () => {
                       </div>
                     ) : (
                       <EnhancedMessageDisplay
-                        mainContent={msg.text}
-                        faqs={msg.faqs}
+                        text={msg.text}
+                        structuredData={msg.structuredData}
+                        className="message-content"
                       />
                     )}
-
-                    {/* FAQs Section */}
-                    {msg.sender === "bot" &&
-                      msg.faqs &&
-                      msg.faqs.length > 0 && (
-                        <FAQ faqs={msg.faqs} className="mt-4" />
-                      )}
 
                     {/* Message Footer */}
                     <div className="flex items-center justify-between mt-4">

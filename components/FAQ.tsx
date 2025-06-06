@@ -19,103 +19,31 @@ interface FAQItem {
 }
 
 interface FAQProps {
-  faqs?: FAQItem[];
-  rawText?: string; // For dynamic parsing
+  faqs: FAQItem[];
   className?: string;
   isProcessingFAQs?: boolean;
   onFAQProcess?: (index: number) => Promise<void>;
   defaultOpen?: boolean;
 }
 
-// Enhanced FAQ parsing function
-function parseFAQs(text: string): FAQItem[] {
-  const faqs: FAQItem[] = [];
-
-  // Multiple patterns to detect FAQs
-  const patterns = [
-    // Pattern: * Question? emoji \n answer
-    /\*\s*(.+?\?)\s*[🚒💉🏥🤔❓🩹🚑🆘🔥💊🩺⚠️ℹ️]?\s*\n((?:(?!\*\s*.+?\?).+(?:\n|$))*)/g,
-    // Pattern: Q: Question? A: Answer
-    /Q\d*[:.]?\s*(.+?\?)\s*A\d*[:.]?\s*([^Q]+?)(?=Q\d*[:.]|$)/gi,
-    // Pattern: **Question?** Answer
-    /\*\*(.+?\?)\*\*\s*\n([^*]+?)(?=\*\*|$)/g,
-    // Pattern: Question on one line, answer on next lines
-    /^(.+\?)\s*$\n((?:(?!^.+\?$).+(?:\n|$))*)/gm,
-  ];
-
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const question = cleanFAQText(match[1]);
-      const answer = cleanFAQText(match[2]);
-
-      if (question && answer && question.length > 5 && answer.length > 5) {
-        // Check for duplicates
-        const isDuplicate = faqs.some(
-          (faq) =>
-            faq.question.toLowerCase().includes(question.toLowerCase()) ||
-            question.toLowerCase().includes(faq.question.toLowerCase())
-        );
-
-        if (!isDuplicate) {
-          faqs.push({
-            question,
-            answer,
-            isProcessed: true,
-          });
-        }
-      }
-    }
-  }
-
-  return faqs;
-}
-
-function cleanFAQText(text: string): string {
-  return text
-    .replace(/[🚒💉🏥🤔❓🩹🚑🆘🔥💊🩺⚠️ℹ️]/g, "") // Remove emojis
-    .replace(/^\s*[\*\-\+\t]\s*/, "") // Remove bullet points
-    .replace(/^Q\d*[:.]?\s*/i, "") // Remove Q: prefix
-    .replace(/^A\d*[:.]?\s*/i, "") // Remove A: prefix
-    .replace(/\s+/g, " ") // Normalize whitespace
-    .trim();
-}
-
 export const FAQ: React.FC<FAQProps> = ({
-  faqs: propFaqs,
-  rawText,
+  faqs,
   className = "",
   isProcessingFAQs = false,
   onFAQProcess,
   defaultOpen = false,
 }) => {
-  // Parse FAQs from raw text if provided, otherwise use prop FAQs
-  const [parsedFaqs, setParsedFaqs] = useState<FAQItem[]>([]);
   const [openItems, setOpenItems] = useState<Set<number>>(new Set());
   const [processingItems, setProcessingItems] = useState<Set<number>>(
     new Set()
   );
 
-  // Parse FAQs from raw text when component mounts or text changes
+  // Auto-open first FAQ if defaultOpen is true
   useEffect(() => {
-    if (rawText) {
-      const parsed = parseFAQs(rawText);
-      setParsedFaqs(parsed);
-
-      // Auto-open first FAQ if defaultOpen is true
-      if (defaultOpen && parsed.length > 0) {
-        setOpenItems(new Set([0]));
-      }
-    } else if (propFaqs) {
-      setParsedFaqs(propFaqs);
-
-      if (defaultOpen && propFaqs.length > 0) {
-        setOpenItems(new Set([0]));
-      }
+    if (defaultOpen && faqs.length > 0) {
+      setOpenItems(new Set([0]));
     }
-  }, [rawText, propFaqs, defaultOpen]);
-
-  const finalFaqs = parsedFaqs.length > 0 ? parsedFaqs : propFaqs || [];
+  }, [faqs, defaultOpen]);
 
   const toggleItem = async (index: number) => {
     const newOpenItems = new Set(openItems);
@@ -126,7 +54,7 @@ export const FAQ: React.FC<FAQProps> = ({
       newOpenItems.add(index);
 
       // If FAQ item needs processing and has onFAQProcess callback
-      const faqItem = finalFaqs[index];
+      const faqItem = faqs[index];
       if (
         onFAQProcess &&
         !faqItem.isProcessed &&
@@ -152,14 +80,14 @@ export const FAQ: React.FC<FAQProps> = ({
   };
 
   const toggleAll = () => {
-    if (openItems.size === finalFaqs.length) {
+    if (openItems.size === faqs.length) {
       setOpenItems(new Set());
     } else {
-      setOpenItems(new Set(finalFaqs.map((_, index) => index)));
+      setOpenItems(new Set(faqs.map((_, index) => index)));
     }
   };
 
-  if (finalFaqs.length === 0) return null;
+  if (!faqs || faqs.length === 0) return null;
 
   return (
     <div
@@ -167,16 +95,17 @@ export const FAQ: React.FC<FAQProps> = ({
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-purple-800 flex items-center gap-2">
-          <HelpCircle className="w-4 h-4" />❓ Frequently Asked Questions
+          <HelpCircle className="w-4 h-4" />
+          Frequently Asked Questions
           <span className="text-xs bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full">
-            {finalFaqs.length}
+            {faqs.length}
           </span>
         </h3>
         <button
           onClick={toggleAll}
           className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1 bg-purple-100 hover:bg-purple-200 px-2 py-1 rounded transition-colors"
         >
-          {openItems.size === finalFaqs.length ? (
+          {openItems.size === faqs.length ? (
             <>
               <ChevronUp className="w-3 h-3" />
               Collapse All
@@ -191,7 +120,7 @@ export const FAQ: React.FC<FAQProps> = ({
       </div>
 
       <div className="space-y-2">
-        {finalFaqs.map((faq, index) => {
+        {faqs.map((faq, index) => {
           const isItemLoading = faq.isLoading || processingItems.has(index);
           const isItemProcessed = faq.isProcessed;
           const hasError = faq.processingError;
@@ -285,7 +214,7 @@ export const FAQ: React.FC<FAQProps> = ({
         <span>
           {isProcessingFAQs
             ? "Processing FAQ responses..."
-            : `${finalFaqs.length} questions available - click to expand answers`}
+            : `${faqs.length} questions available - click to expand answers`}
         </span>
         {isProcessingFAQs && <Loader2 className="w-3 h-3 animate-spin" />}
       </div>
@@ -293,32 +222,16 @@ export const FAQ: React.FC<FAQProps> = ({
   );
 };
 
-// Enhanced answer formatting
+// Simplified answer formatting (keep only essential formatting)
 function formatFAQAnswer(answer: string): string {
-  return (
-    answer
-      .replace(
-        /\*\*(.*?)\*\*/g,
-        '<strong class="font-semibold text-slate-800">$1</strong>'
-      )
-      .replace(/\*(.*?)\*/g, '<em class="italic text-slate-600">$1</em>')
-      .replace(/\n\n/g, '</p><p class="mt-2">')
-      .replace(/\n/g, "<br/>")
-      .replace(/^/, "<p>")
-      .replace(/$/, "</p>")
-      // Highlight important medical terms
-      .replace(
-        /\b(emergency|urgent|important|warning|caution|danger|critical|immediately)\b/gi,
-        '<span class="font-bold text-red-600 bg-red-100 px-1 rounded">$1</span>'
-      )
-      .replace(
-        /\b(call|phone|contact)\s*(108|911|999|\d{3})\b/gi,
-        '<span class="font-bold text-red-600 bg-red-100 px-1 rounded">📞 $1 $2</span>'
-      )
-      // Highlight medical procedures
-      .replace(
-        /\b(apply pressure|elevate|bandage|compress|tourniquet)\b/gi,
-        '<span class="font-medium text-blue-700 bg-blue-100 px-1 rounded">$1</span>'
-      )
-  );
+  return answer
+    .replace(
+      /\*\*(.*?)\*\*/g,
+      '<strong class="font-semibold text-slate-800">$1</strong>'
+    )
+    .replace(/\*(.*?)\*/g, '<em class="italic text-slate-600">$1</em>')
+    .replace(/\n\n/g, '</p><p class="mt-2">')
+    .replace(/\n/g, "<br/>")
+    .replace(/^/, "<p>")
+    .replace(/$/, "</p>");
 }
