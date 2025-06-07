@@ -8,33 +8,38 @@ interface HospitalRequest {
 export async function POST(request: NextRequest) {
   try {
     const body: HospitalRequest = await request.json();
-    
+
     // Validate required fields
     if (!body.latitude || !body.longitude) {
       return NextResponse.json(
-        { error: 'Missing required fields: latitude, longitude' },
+        { error: "Missing required fields: latitude, longitude" },
         { status: 400 }
       );
     }
 
-    console.log(`Searching for hospitals near: ${body.latitude}, ${body.longitude}`);
+    console.log(
+      `Searching for hospitals near: ${body.latitude}, ${body.longitude}`
+    );
 
     // Call the external API
-    const externalResponse = await fetch('https://firstaid-chat-bot-api.onrender.com/nearby-medical', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        latitude: body.latitude,
-        longitude: body.longitude,
-      }),
-    });
+    const externalResponse = await fetch(
+      `${process.env.HEALTH_PROFILE_API_URL}/nearby-medical`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          latitude: body.latitude,
+          longitude: body.longitude,
+        }),
+      }
+    );
 
     if (!externalResponse.ok) {
       const errorText = await externalResponse.text();
-      console.error('External API error:', errorText);
-      
+      console.error("External API error:", errorText);
+
       // Provide fallback response if external API fails
       const fallbackResponse = {
         location: {
@@ -64,16 +69,17 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await externalResponse.json();
-    console.log(`External API returned ${data.nearby_hospitals?.length || 0} hospitals`);
-    
-    return NextResponse.json(data);
+    console.log(
+      `External API returned ${data.nearby_hospitals?.length || 0} hospitals`
+    );
 
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Hospital search API error:', error);
-    
+    console.error("Hospital search API error:", error);
+
     // Return error response
     return NextResponse.json(
-      { error: 'Internal server error. Please try again.' },
+      { error: "Internal server error. Please try again." },
       { status: 500 }
     );
   }

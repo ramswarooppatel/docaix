@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       externalFormData.append("image", blob, "image.jpg");
 
       const response = await fetch(
-        "https://first-aid-injury-image-context.onrender.com/analyze",
+        `${process.env.ANALYZE_IMG_API_URL}/analyze`,
         {
           method: "POST",
           body: externalFormData,

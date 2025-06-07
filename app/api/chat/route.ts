@@ -26,25 +26,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to the existing backend API
-    const response = await fetch(
-      "https://firstaid-chat-bot-api.onrender.com/chat",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: body.message,
-          session_id: body.session_id || undefined,
-          user_location: body.user_location
-            ? {
-                lat: body.user_location.lat,
-                lng: body.user_location.lng,
-              }
-            : null,
-        }),
-      }
-    );
+    const response = await fetch(`${process.env.CHAT_API_URL}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: body.message,
+        session_id: body.session_id || undefined,
+        user_location: body.user_location
+          ? {
+              lat: body.user_location.lat,
+              lng: body.user_location.lng,
+            }
+          : null,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
