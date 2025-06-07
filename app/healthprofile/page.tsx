@@ -4,22 +4,21 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
-  Heart, 
-  Activity, 
-  Pill, 
-  AlertTriangle, 
+import {
+  User,
+  Heart,
+  Activity,
+  Pill,
+  AlertTriangle,
   TrendingUp,
   Calendar,
   Weight,
@@ -33,7 +32,7 @@ import {
   CheckCircle,
   Loader2,
   Plus,
-  X
+  X,
 } from "lucide-react";
 
 interface HealthProfileForm {
@@ -115,14 +114,14 @@ const HealthProfilePage = () => {
   const [newAllergy, setNewAllergy] = useState("");
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
   };
 
   const handleLifestyleChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       lifestyle: {
         ...prev.lifestyle,
@@ -131,17 +130,29 @@ const HealthProfilePage = () => {
     }));
   };
 
-  const addArrayItem = (array: keyof Pick<HealthProfileForm, 'medical_conditions' | 'medications' | 'allergies'>, item: string) => {
+  const addArrayItem = (
+    array: keyof Pick<
+      HealthProfileForm,
+      "medical_conditions" | "medications" | "allergies"
+    >,
+    item: string
+  ) => {
     if (item.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [array]: [...prev[array], item.trim()],
       }));
     }
   };
 
-  const removeArrayItem = (array: keyof Pick<HealthProfileForm, 'medical_conditions' | 'medications' | 'allergies'>, index: number) => {
-    setFormData(prev => ({
+  const removeArrayItem = (
+    array: keyof Pick<
+      HealthProfileForm,
+      "medical_conditions" | "medications" | "allergies"
+    >,
+    index: number
+  ) => {
+    setFormData((prev) => ({
       ...prev,
       [array]: prev[array].filter((_, i) => i !== index),
     }));
@@ -161,8 +172,11 @@ const HealthProfilePage = () => {
       };
 
       // Remove empty fields
-      Object.keys(payload).forEach(key => {
-        if (payload[key as keyof typeof payload] === "" || payload[key as keyof typeof payload] === undefined) {
+      Object.keys(payload).forEach((key) => {
+        if (
+          payload[key as keyof typeof payload] === "" ||
+          payload[key as keyof typeof payload] === undefined
+        ) {
           delete payload[key as keyof typeof payload];
         }
       });
@@ -182,7 +196,6 @@ const HealthProfilePage = () => {
       const data = await response.json();
       setResults(data);
     } catch (err) {
-      console.error("Error analyzing health profile:", err);
       setError("Failed to analyze health profile. Please try again.");
     } finally {
       setIsLoading(false);
@@ -205,12 +218,14 @@ const HealthProfilePage = () => {
         results,
         timestamp: new Date().toISOString(),
       };
-      localStorage.setItem('healthProfile', JSON.stringify(healthProfileData));
-      
+      localStorage.setItem("healthProfile", JSON.stringify(healthProfileData));
+
       // Dispatch custom event to notify other components
-      window.dispatchEvent(new CustomEvent('healthProfileUpdated', {
-        detail: healthProfileData
-      }));
+      window.dispatchEvent(
+        new CustomEvent("healthProfileUpdated", {
+          detail: healthProfileData,
+        })
+      );
     }
   }, [results, formData]);
 
@@ -218,22 +233,24 @@ const HealthProfilePage = () => {
   useEffect(() => {
     const loadSavedProfile = () => {
       try {
-        const savedProfile = localStorage.getItem('healthProfile');
+        const savedProfile = localStorage.getItem("healthProfile");
         if (savedProfile) {
           const parsedProfile = JSON.parse(savedProfile);
           if (parsedProfile.formData && parsedProfile.results) {
             // Check if data is not too old (optional - remove this check if you want persistent data)
             const savedDate = new Date(parsedProfile.timestamp);
-            const daysDiff = (Date.now() - savedDate.getTime()) / (1000 * 60 * 60 * 24);
-            
-            if (daysDiff < 30) { // Keep data for 30 days
+            const daysDiff =
+              (Date.now() - savedDate.getTime()) / (1000 * 60 * 60 * 24);
+
+            if (daysDiff < 30) {
+              // Keep data for 30 days
               setFormData(parsedProfile.formData);
               setResults(parsedProfile.results);
             }
           }
         }
       } catch (error) {
-        console.error('Error loading saved health profile:', error);
+        // Error loading saved health profile - silent fail
       }
     };
 
@@ -242,10 +259,12 @@ const HealthProfilePage = () => {
 
   // Add this function to clear saved profile
   const clearSavedProfile = () => {
-    localStorage.removeItem('healthProfile');
-    window.dispatchEvent(new CustomEvent('healthProfileUpdated', {
-      detail: null
-    }));
+    localStorage.removeItem("healthProfile");
+    window.dispatchEvent(
+      new CustomEvent("healthProfileUpdated", {
+        detail: null,
+      })
+    );
   };
 
   return (
@@ -257,11 +276,14 @@ const HealthProfilePage = () => {
             <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
               <Heart className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-800">Health Profile Analysis</h1>
+            <h1 className="text-3xl font-bold text-slate-800">
+              Health Profile Analysis
+            </h1>
           </div>
           <p className="text-slate-600 max-w-2xl mx-auto">
-            Get personalized health recommendations based on your medical profile. 
-            Fill out the form below to receive AI-powered insights and guidance.
+            Get personalized health recommendations based on your medical
+            profile. Fill out the form below to receive AI-powered insights and
+            guidance.
           </p>
         </div>
 
@@ -299,7 +321,12 @@ const HealthProfilePage = () => {
                       <User className="w-4 h-4" />
                       Gender
                     </Label>
-                    <Select value={formData.gender} onValueChange={(value) => handleInputChange("gender", value)}>
+                    <Select
+                      value={formData.gender}
+                      onValueChange={(value) =>
+                        handleInputChange("gender", value)
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
@@ -307,7 +334,9 @@ const HealthProfilePage = () => {
                         <SelectItem value="Male">Male</SelectItem>
                         <SelectItem value="Female">Female</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
-                        <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                        <SelectItem value="Prefer not to say">
+                          Prefer not to say
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -321,7 +350,9 @@ const HealthProfilePage = () => {
                       id="weight"
                       type="number"
                       value={formData.weight}
-                      onChange={(e) => handleInputChange("weight", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("weight", e.target.value)
+                      }
                       placeholder="Enter weight"
                       min="1"
                       step="0.1"
@@ -337,7 +368,9 @@ const HealthProfilePage = () => {
                       id="height"
                       type="number"
                       value={formData.height}
-                      onChange={(e) => handleInputChange("height", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("height", e.target.value)
+                      }
                       placeholder="Enter height"
                       min="1"
                       step="0.1"
@@ -377,11 +410,17 @@ const HealthProfilePage = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.medical_conditions.map((condition, index) => (
-                      <Badge key={index} variant="outline" className="flex items-center gap-1">
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
                         {condition}
                         <button
                           type="button"
-                          onClick={() => removeArrayItem("medical_conditions", index)}
+                          onClick={() =>
+                            removeArrayItem("medical_conditions", index)
+                          }
                           className="ml-1 hover:bg-red-100 rounded-full p-1"
                         >
                           <X className="w-3 h-3" />
@@ -423,7 +462,11 @@ const HealthProfilePage = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.medications.map((medication, index) => (
-                      <Badge key={index} variant="outline" className="flex items-center gap-1">
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
                         {medication}
                         <button
                           type="button"
@@ -469,7 +512,11 @@ const HealthProfilePage = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {formData.allergies.map((allergy, index) => (
-                      <Badge key={index} variant="outline" className="flex items-center gap-1">
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
                         {allergy}
                         <button
                           type="button"
@@ -489,11 +536,16 @@ const HealthProfilePage = () => {
                     <Activity className="w-5 h-5 text-green-500" />
                     Lifestyle Information
                   </Label>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Activity Level</Label>
-                      <Select value={formData.lifestyle.activity_level} onValueChange={(value) => handleLifestyleChange("activity_level", value)}>
+                      <Select
+                        value={formData.lifestyle.activity_level}
+                        onValueChange={(value) =>
+                          handleLifestyleChange("activity_level", value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select activity level" />
                         </SelectTrigger>
@@ -502,29 +554,45 @@ const HealthProfilePage = () => {
                           <SelectItem value="Light">Light</SelectItem>
                           <SelectItem value="Moderate">Moderate</SelectItem>
                           <SelectItem value="Active">Active</SelectItem>
-                          <SelectItem value="Very Active">Very Active</SelectItem>
+                          <SelectItem value="Very Active">
+                            Very Active
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
                       <Label>Smoking Status</Label>
-                      <Select value={formData.lifestyle.smoking} onValueChange={(value) => handleLifestyleChange("smoking", value)}>
+                      <Select
+                        value={formData.lifestyle.smoking}
+                        onValueChange={(value) =>
+                          handleLifestyleChange("smoking", value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select smoking status" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="No">No</SelectItem>
-                          <SelectItem value="Occasionally">Occasionally</SelectItem>
+                          <SelectItem value="Occasionally">
+                            Occasionally
+                          </SelectItem>
                           <SelectItem value="Regularly">Regularly</SelectItem>
-                          <SelectItem value="Former smoker">Former smoker</SelectItem>
+                          <SelectItem value="Former smoker">
+                            Former smoker
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
                       <Label>Alcohol Consumption</Label>
-                      <Select value={formData.lifestyle.alcohol} onValueChange={(value) => handleLifestyleChange("alcohol", value)}>
+                      <Select
+                        value={formData.lifestyle.alcohol}
+                        onValueChange={(value) =>
+                          handleLifestyleChange("alcohol", value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select alcohol consumption" />
                         </SelectTrigger>
@@ -539,17 +607,26 @@ const HealthProfilePage = () => {
 
                     <div className="space-y-2">
                       <Label>Sleep Hours</Label>
-                      <Select value={formData.lifestyle.sleep_hours} onValueChange={(value) => handleLifestyleChange("sleep_hours", value)}>
+                      <Select
+                        value={formData.lifestyle.sleep_hours}
+                        onValueChange={(value) =>
+                          handleLifestyleChange("sleep_hours", value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select sleep hours" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Less than 5 hours">Less than 5 hours</SelectItem>
+                          <SelectItem value="Less than 5 hours">
+                            Less than 5 hours
+                          </SelectItem>
                           <SelectItem value="5-6 hours">5-6 hours</SelectItem>
                           <SelectItem value="6-7 hours">6-7 hours</SelectItem>
                           <SelectItem value="7-8 hours">7-8 hours</SelectItem>
                           <SelectItem value="8-9 hours">8-9 hours</SelectItem>
-                          <SelectItem value="More than 9 hours">More than 9 hours</SelectItem>
+                          <SelectItem value="More than 9 hours">
+                            More than 9 hours
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -604,23 +681,43 @@ const HealthProfilePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <Calendar className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-blue-700">{results.profile.age}</div>
+                    <div className="text-2xl font-bold text-blue-700">
+                      {results.profile.age}
+                    </div>
                     <div className="text-sm text-blue-600">Years Old</div>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
                     <Weight className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-purple-700">{results.profile.weight}kg</div>
+                    <div className="text-2xl font-bold text-purple-700">
+                      {results.profile.weight}kg
+                    </div>
                     <div className="text-sm text-purple-600">Weight</div>
                   </div>
                   <div className="text-center p-4 bg-indigo-50 rounded-lg">
                     <Ruler className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-indigo-700">{results.profile.height}cm</div>
+                    <div className="text-2xl font-bold text-indigo-700">
+                      {results.profile.height}cm
+                    </div>
                     <div className="text-sm text-indigo-600">Height</div>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <TrendingUp className={`w-8 h-8 mx-auto mb-2 ${getBMIColor(results.profile.bmi)}`} />
-                    <div className={`text-2xl font-bold ${getBMIColor(results.profile.bmi)}`}>{results.profile.bmi}</div>
-                    <div className={`text-sm ${getBMIColor(results.profile.bmi)}`}>{results.profile.bmi_category}</div>
+                    <TrendingUp
+                      className={`w-8 h-8 mx-auto mb-2 ${getBMIColor(
+                        results.profile.bmi
+                      )}`}
+                    />
+                    <div
+                      className={`text-2xl font-bold ${getBMIColor(
+                        results.profile.bmi
+                      )}`}
+                    >
+                      {results.profile.bmi}
+                    </div>
+                    <div
+                      className={`text-sm ${getBMIColor(results.profile.bmi)}`}
+                    >
+                      {results.profile.bmi_category}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -638,12 +735,14 @@ const HealthProfilePage = () => {
                 </CardHeader>
                 <CardContent className="p-4">
                   <ul className="space-y-2">
-                    {results.recommendations.general_health_tips.map((tip, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{tip}</span>
-                      </li>
-                    ))}
+                    {results.recommendations.general_health_tips.map(
+                      (tip, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{tip}</span>
+                        </li>
+                      )
+                    )}
                   </ul>
                 </CardContent>
               </Card>
@@ -658,12 +757,14 @@ const HealthProfilePage = () => {
                 </CardHeader>
                 <CardContent className="p-4">
                   <ul className="space-y-2">
-                    {results.recommendations.exercise_recommendations.map((exercise, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Activity className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{exercise}</span>
-                      </li>
-                    ))}
+                    {results.recommendations.exercise_recommendations.map(
+                      (exercise, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <Activity className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{exercise}</span>
+                        </li>
+                      )
+                    )}
                   </ul>
                 </CardContent>
               </Card>
@@ -679,43 +780,73 @@ const HealthProfilePage = () => {
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                      <h4 className="font-semibold text-orange-700 mb-2">🌅 Breakfast</h4>
+                      <h4 className="font-semibold text-orange-700 mb-2">
+                        🌅 Breakfast
+                      </h4>
                       <ul className="space-y-1">
-                        {results.recommendations.diet_plan.breakfast.map((item, index) => (
-                          <li key={index} className="text-sm text-slate-600">• {item}</li>
-                        ))}
+                        {results.recommendations.diet_plan.breakfast.map(
+                          (item, index) => (
+                            <li key={index} className="text-sm text-slate-600">
+                              • {item}
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-orange-700 mb-2">🌤️ Lunch</h4>
+                      <h4 className="font-semibold text-orange-700 mb-2">
+                        🌤️ Lunch
+                      </h4>
                       <ul className="space-y-1">
-                        {results.recommendations.diet_plan.lunch.map((item, index) => (
-                          <li key={index} className="text-sm text-slate-600">• {item}</li>
-                        ))}
+                        {results.recommendations.diet_plan.lunch.map(
+                          (item, index) => (
+                            <li key={index} className="text-sm text-slate-600">
+                              • {item}
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-orange-700 mb-2">🌙 Dinner</h4>
+                      <h4 className="font-semibold text-orange-700 mb-2">
+                        🌙 Dinner
+                      </h4>
                       <ul className="space-y-1">
-                        {results.recommendations.diet_plan.dinner.map((item, index) => (
-                          <li key={index} className="text-sm text-slate-600">• {item}</li>
-                        ))}
+                        {results.recommendations.diet_plan.dinner.map(
+                          (item, index) => (
+                            <li key={index} className="text-sm text-slate-600">
+                              • {item}
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-green-700 mb-2">🍎 Snacks</h4>
+                      <h4 className="font-semibold text-green-700 mb-2">
+                        🍎 Snacks
+                      </h4>
                       <ul className="space-y-1">
-                        {results.recommendations.diet_plan.snacks.map((item, index) => (
-                          <li key={index} className="text-sm text-slate-600">• {item}</li>
-                        ))}
+                        {results.recommendations.diet_plan.snacks.map(
+                          (item, index) => (
+                            <li key={index} className="text-sm text-slate-600">
+                              • {item}
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-red-700 mb-2">🚫 Avoid</h4>
+                      <h4 className="font-semibold text-red-700 mb-2">
+                        🚫 Avoid
+                      </h4>
                       <ul className="space-y-1">
-                        {results.recommendations.diet_plan.foods_to_avoid.map((item, index) => (
-                          <li key={index} className="text-sm text-slate-600">• {item}</li>
-                        ))}
+                        {results.recommendations.diet_plan.foods_to_avoid.map(
+                          (item, index) => (
+                            <li key={index} className="text-sm text-slate-600">
+                              • {item}
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                   </div>
@@ -732,12 +863,14 @@ const HealthProfilePage = () => {
                 </CardHeader>
                 <CardContent className="p-4">
                   <ul className="space-y-2">
-                    {results.recommendations.medical_precautions.map((precaution, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{precaution}</span>
-                      </li>
-                    ))}
+                    {results.recommendations.medical_precautions.map(
+                      (precaution, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{precaution}</span>
+                        </li>
+                      )
+                    )}
                   </ul>
                 </CardContent>
               </Card>
@@ -752,12 +885,14 @@ const HealthProfilePage = () => {
                 </CardHeader>
                 <CardContent className="p-4">
                   <ul className="space-y-2">
-                    {results.recommendations.health_monitoring.map((monitor, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Clock className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{monitor}</span>
-                      </li>
-                    ))}
+                    {results.recommendations.health_monitoring.map(
+                      (monitor, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <Clock className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{monitor}</span>
+                        </li>
+                      )
+                    )}
                   </ul>
                 </CardContent>
               </Card>
@@ -769,9 +904,15 @@ const HealthProfilePage = () => {
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="w-6 h-6 text-yellow-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-yellow-800 mb-2">Important Disclaimer</h3>
-                    <p className="text-sm text-yellow-700">{results.disclaimer}</p>
-                    <p className="text-xs text-yellow-600 mt-2">Generated on: {results.generated_at}</p>
+                    <h3 className="font-semibold text-yellow-800 mb-2">
+                      Important Disclaimer
+                    </h3>
+                    <p className="text-sm text-yellow-700">
+                      {results.disclaimer}
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-2">
+                      Generated on: {results.generated_at}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -797,7 +938,7 @@ const HealthProfilePage = () => {
                       sleep_hours: "",
                     },
                   });
-                  clearSavedProfile(); // Add this line
+                  clearSavedProfile();
                 }}
                 className="px-6 py-2 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800"
               >

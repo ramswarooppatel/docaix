@@ -89,7 +89,7 @@ const ChatPage = () => {
           });
         },
         (error) => {
-          console.log("Location access not available for chat");
+          // Location access not available for chat
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
       );
@@ -123,7 +123,7 @@ const ChatPage = () => {
           });
         }
       } catch (error) {
-        console.log("Permission API not supported");
+        // Permission API not supported
       }
     };
 
@@ -133,10 +133,7 @@ const ChatPage = () => {
   const handleVoiceCommand = async (command: string) => {
     if (isLoading) return;
 
-    console.log("🎤 Voice command received:", command);
-
     if (!command || command.trim() === "") {
-      console.log("⚠️ Empty voice command received");
       return;
     }
 
@@ -155,26 +152,23 @@ const ChatPage = () => {
     try {
       setIsLoading(true);
 
-      // Step 1: Get response from your API
-      const response = await fetch(
-        "https://firstaid-chat-bot-api.onrender.com/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: userInput,
-            session_id: sessionId || undefined,
-            user_location: userLocation
-              ? {
-                  lat: userLocation.lat,
-                  lng: userLocation.lng,
-                }
-              : null,
-          }),
-        }
-      );
+      // Step 1: Get response from local chat API (which proxies to backend)
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userInput,
+          session_id: sessionId || undefined,
+          user_location: userLocation
+            ? {
+                lat: userLocation.lat,
+                lng: userLocation.lng,
+              }
+            : null,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(`API request failed with status: ${response.status}`);
@@ -199,11 +193,10 @@ const ChatPage = () => {
       }
 
       const structuredData = await jsonResponse.json();
-      console.log("Structured data from API:", structuredData);
 
       // Use the ref counter instead of Date.now()
       const botMessage = {
-        id: ++messageIdRef.current, // ✅ Use counter instead of Date.now()
+        id: ++messageIdRef.current,
         sender: "bot" as const,
         text: aiResponseText,
         timestamp: new Date(),
@@ -213,8 +206,19 @@ const ChatPage = () => {
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error("Error processing message:", error);
       // Display error to user
+      const errorMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot" as const,
+        text: `I'm sorry, I'm having trouble connecting to my services right now. For medical emergencies, please call your local emergency services immediately (911 in US, 108 in India). 
+
+For non-emergency situations, please try again in a moment or consult with a healthcare professional.`,
+        timestamp: new Date(),
+        structuredData: undefined,
+        sessionId: "error",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -222,12 +226,10 @@ const ChatPage = () => {
 
   const handleSend = async () => {
     if (selectedImage) {
-      console.log("🖼️ Handling send with image...");
       return await handleSendWithImage();
     }
 
     if (!input.trim() || isLoading) {
-      console.log("⚠️ No input or already loading");
       return;
     }
 
@@ -271,15 +273,13 @@ const ChatPage = () => {
 
       await sendMessage(combinedMessage);
     } catch (error) {
-      console.error("Error sending message with image:", error);
+      // Error sending message with image
     } finally {
       setIsLoading(false);
     }
   };
 
   const analyzeImage = async (imageBase64: string): Promise<string> => {
-    console.log("🔍 Starting image analysis...");
-
     try {
       setIsAnalyzingImage(true);
 
@@ -287,68 +287,42 @@ const ChatPage = () => {
         throw new Error("No image data provided");
       }
 
-      const base64Data = imageBase64.split(",")[1];
-      if (!base64Data || base64Data.trim() === "") {
-        throw new Error("Invalid image data format - empty base64 string");
-      }
-
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: "image/jpeg" });
-
-      const formData = new FormData();
-      formData.append("image", blob, "injury.jpg");
-
-      console.log("📤 Sending image to analysis API...");
-
-      const response = await fetch(
-        "https://first-aid-injury-image-context.onrender.com/analyze",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch("/api/analyze-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          image: imageBase64,
+        }),
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ API Error:", {
-          status: response.status,
-          statusText: response.statusText,
-          errorText: errorText,
-        });
+        const errorData = await response.json().catch(() => ({}));
 
         if (response.status === 422) {
           throw new Error(
-            `Invalid image format or missing data. Please ensure you're uploading a valid JPG image.`
+            errorData.error ||
+              "Invalid image format or missing data. Please ensure you're uploading a valid image."
           );
         }
 
         throw new Error(
-          `Image analysis failed: ${response.status} - ${errorText}`
+          errorData.error || `Image analysis failed: ${response.status}`
         );
       }
 
       const data = await response.json();
-      console.log("✅ Analysis result:", data);
 
       const result =
         data.analysis ||
-        data.context ||
         data.description ||
         data.result ||
         data.message ||
         "Image analysis completed";
 
-      console.log("📝 Final analysis text:", result);
-
       return result;
     } catch (error) {
-      console.error("❌ Image analysis error:", error);
-
       if (error instanceof TypeError && error.message.includes("fetch")) {
         return "Network error: Unable to connect to image analysis service. Please check your internet connection and try again.";
       } else if (
@@ -357,7 +331,7 @@ const ChatPage = () => {
       ) {
         return "Service unavailable: The image analysis service might be temporarily down. Please try again in a few moments.";
       } else if (error instanceof Error && error.message.includes("422")) {
-        return "Invalid image format: Please ensure you're uploading a valid JPG/JPEG image file.";
+        return "Invalid image format: Please ensure you're uploading a valid image file.";
       } else {
         return `Image analysis failed: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -372,25 +346,23 @@ const ChatPage = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    console.log("📁 File selected:", {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified,
-    });
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
 
-    const allowedTypes = ["image/jpeg", "image/jpg"];
     if (!allowedTypes.includes(file.type.toLowerCase())) {
-      console.error("❌ Invalid file type:", file.type);
-      // Enhanced error notification
-      const errorMsg = "Please select only JPG/JPEG image files";
+      const errorMsg =
+        "Please select a valid image file (JPG, PNG, WebP, or GIF)";
       alert(errorMsg);
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      console.error("❌ File too large:", file.size);
-      const errorMsg = "Image size should be less than 5MB";
+    if (file.size > 10 * 1024 * 1024) {
+      const errorMsg = "Image size should be less than 10MB";
       alert(errorMsg);
       return;
     }
@@ -411,13 +383,11 @@ const ChatPage = () => {
       const base64 = e.target?.result as string;
 
       if (!base64 || typeof base64 !== "string") {
-        console.error("❌ Invalid FileReader result");
         document.body.removeChild(loadingToast);
         alert("Failed to read the image file. Please try again.");
         return;
       }
 
-      console.log("✅ Image loaded successfully");
       setSelectedImage(base64);
 
       // Remove loading toast and show success
@@ -454,7 +424,6 @@ const ChatPage = () => {
     };
 
     reader.onerror = () => {
-      console.error("❌ FileReader error");
       document.body.removeChild(loadingToast);
       alert("Failed to read the image file. Please try again.");
     };
@@ -733,7 +702,7 @@ const ChatPage = () => {
       {/* Enhanced Input Area with Visual Feedback */}
       <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5">
         <div className="w-full max-w-4xl mx-auto space-y-4">
-          {/* Image Preview Section - NEW */}
+          {/* Image Preview Section */}
           {selectedImage && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-start gap-4">
@@ -757,12 +726,12 @@ const ChatPage = () => {
                       Image Ready to Send
                     </h3>
                     <div className="px-2 py-1 bg-green-200 text-green-700 text-xs rounded-full font-medium">
-                      JPG
+                      IMG
                     </div>
                   </div>
                   <p className="text-sm text-green-700 mb-3">
                     📸 Your injury photo has been selected and will be analyzed
-                    by DOCai for medical guidance.
+                    by DOCai for first aid guidance.
                   </p>
 
                   {/* Action Buttons */}
@@ -815,16 +784,6 @@ const ChatPage = () => {
             </div>
           )}
 
-          {/* Upload Success Notification */}
-          {/* {micPermission === "granted" && !isVoiceListening && (
-            <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700">
-              <Mic className="w-4 h-4" />
-              <span className="text-xs">
-                🎤 Voice input ready - Click the microphone button to start
-              </span>
-            </div>
-          )} */}
-
           {/* Input Row */}
           <div className="flex gap-3 items-end">
             <div className="flex-1 relative">
@@ -854,7 +813,7 @@ const ChatPage = () => {
                   className={`p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 ${
                     selectedImage ? "text-green-600 bg-green-100" : ""
                   }`}
-                  title="Upload injury photo (JPG only)"
+                  title="Upload injury photo"
                 >
                   <Camera
                     className={`w-4 h-4 ${
@@ -904,7 +863,7 @@ const ChatPage = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/jpg,.jpg,.jpeg"
+            accept="image/*"
             onChange={handleImageUpload}
             className="hidden"
             capture="environment"
