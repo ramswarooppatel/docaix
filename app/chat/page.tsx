@@ -5,10 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SignalIndicators } from "@/components/signal-indicators";
 import { EmergencyActions } from "@/components/emergency-actions";
-import { FAQ } from "@/components/FAQ";
 import { EnhancedMessageDisplay } from "@/components/EnhancedMessageDisplay";
 import {
-  MessageCircle,
   SendHorizonal,
   Stethoscope,
   CheckCircle,
@@ -22,24 +20,14 @@ import {
   ArrowLeft,
   Mic,
   MicOff,
-  Zap,
-  Shield,
   Activity,
-  Building2, // Add this import
+  Building2,
   Camera,
-  Image as ImageIcon,
   X,
-  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import VoiceInput from "@/components/VoiceInput";
-import VoiceWaveAnimation from "@/components/VoiceWaveAnimation";
 import SpeakButton from "@/components/SpeakButton";
-
-interface FAQItem {
-  question: string;
-  answer: string;
-}
 
 interface ChatMessage {
   id: number;

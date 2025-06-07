@@ -36,7 +36,7 @@ const Home = () => {
                 DocAI
               </h1>
               <p className="text-xs sm:text-sm text-slate-600">
-                AI Medical Assistant
+                AI First-Aid Assistant
               </p>
             </div>
           </div>
@@ -63,13 +63,13 @@ const Home = () => {
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-slate-800 mb-4 sm:mb-6">
               Your AI-Powered
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 block">
-                Medical Assistant
+                First Aid Assistant
               </span>
             </h1>
             <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
-              Get instant first aid guidance, emergency assistance, and medical
-              support 24/7. DocAI is here to help you stay safe and handle
-              medical emergencies with confidence.
+              Get instant first aid guidance and emergency assistance support
+              24/7. DocAI is here to help you stay safe and handle medical
+              emergencies with confidence.
             </p>
 
             {/* Primary Action Buttons */}
@@ -84,7 +84,7 @@ const Home = () => {
                   <ArrowRight className="w-5 h-5 ml-3" />
                 </Button>
               </Link>
-              
+
               {/* Add Hospitals Button */}
               <Link href="/hospitals">
                 <Button
@@ -96,7 +96,7 @@ const Home = () => {
                   Find Nearby Hospitals
                 </Button>
               </Link>
-              
+
               {/* Health Profile Button */}
               <Link href="/healthprofile">
                 <Button
@@ -108,7 +108,7 @@ const Home = () => {
                   Health Profile Analysis
                 </Button>
               </Link>
-              
+
               <Link href="/settings">
                 <Button
                   variant="outline"
@@ -147,7 +147,8 @@ const Home = () => {
                 Nearby Hospitals
               </h3>
               <p className="text-slate-600 leading-relaxed">
-                Find hospitals, clinics, and emergency centers near your location with directions and contact information.
+                Find hospitals, clinics, and emergency centers near your
+                location with directions and contact information.
               </p>
             </div>
 
@@ -160,7 +161,8 @@ const Home = () => {
                 Health Profile Analysis
               </h3>
               <p className="text-slate-600 leading-relaxed">
-                Get personalized health recommendations based on your medical profile, lifestyle, and conditions.
+                Get personalized health recommendations based on your medical
+                profile, lifestyle, and conditions.
               </p>
             </div>
 
@@ -260,7 +262,7 @@ const Home = () => {
                   Start Using DocAI Now
                 </Button>
               </Link>
-              
+
               {/* Add Hospitals CTA */}
               <Link href="/hospitals">
                 <Button
@@ -272,7 +274,7 @@ const Home = () => {
                   Find Hospitals
                 </Button>
               </Link>
-              
+
               {/* Health Profile CTA */}
               <Link href="/healthprofile">
                 <Button
