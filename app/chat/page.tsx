@@ -99,9 +99,6 @@ const ChatPage = () => {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
-          console.log(
-            "Chat page has access to user location for enhanced responses"
-          );
         },
         (error) => {
           console.log("Location access not available for chat");
@@ -411,8 +408,9 @@ const ChatPage = () => {
     }
 
     // Show loading state while processing
-    const loadingToast = document.createElement('div');
-    loadingToast.className = 'fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2';
+    const loadingToast = document.createElement("div");
+    loadingToast.className =
+      "fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2";
     loadingToast.innerHTML = `
       <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
       <span>Processing image...</span>
@@ -433,13 +431,14 @@ const ChatPage = () => {
 
       console.log("✅ Image loaded successfully");
       setSelectedImage(base64);
-      
+
       // Remove loading toast and show success
       document.body.removeChild(loadingToast);
-      
+
       // Show success notification
-      const successToast = document.createElement('div');
-      successToast.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-in slide-in-from-right duration-300';
+      const successToast = document.createElement("div");
+      successToast.className =
+        "fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-in slide-in-from-right duration-300";
       successToast.innerHTML = `
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
           <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -447,11 +446,11 @@ const ChatPage = () => {
         <span>Image ready for analysis!</span>
       `;
       document.body.appendChild(successToast);
-      
+
       // Auto-remove success toast after 3 seconds
       setTimeout(() => {
         if (document.body.contains(successToast)) {
-          successToast.style.animation = 'slide-out-to-right 0.3s ease-in-out';
+          successToast.style.animation = "slide-out-to-right 0.3s ease-in-out";
           setTimeout(() => {
             if (document.body.contains(successToast)) {
               document.body.removeChild(successToast);
@@ -607,7 +606,7 @@ const ChatPage = () => {
                   <Camera className="w-4 h-4 mr-2" />
                   Upload Injury Photo
                 </Button>
-                
+
                 {/* Add Hospitals Quick Action */}
                 <Link href="/hospitals">
                   <Button
@@ -618,7 +617,7 @@ const ChatPage = () => {
                     Find Hospitals
                   </Button>
                 </Link>
-                
+
                 {/* Health Profile Quick Action */}
                 <Link href="/healthprofile">
                   <Button
@@ -746,7 +745,6 @@ const ChatPage = () => {
       {/* Enhanced Input Area with Visual Feedback */}
       <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5">
         <div className="w-full max-w-4xl mx-auto space-y-4">
-          
           {/* Image Preview Section - NEW */}
           {selectedImage && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -762,20 +760,23 @@ const ChatPage = () => {
                     <CheckCircle className="w-4 h-4 text-white" />
                   </div>
                 </div>
-                
+
                 {/* Image Info and Actions */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     <Camera className="w-5 h-5 text-green-600" />
-                    <h3 className="font-semibold text-green-800">Image Ready to Send</h3>
+                    <h3 className="font-semibold text-green-800">
+                      Image Ready to Send
+                    </h3>
                     <div className="px-2 py-1 bg-green-200 text-green-700 text-xs rounded-full font-medium">
                       JPG
                     </div>
                   </div>
                   <p className="text-sm text-green-700 mb-3">
-                    📸 Your injury photo has been selected and will be analyzed by DOCai for medical guidance.
+                    📸 Your injury photo has been selected and will be analyzed
+                    by DOCai for medical guidance.
                   </p>
-                  
+
                   {/* Action Buttons */}
                   <div className="flex gap-2">
                     <Button
@@ -799,7 +800,7 @@ const ChatPage = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Progress Bar Animation */}
               <div className="mt-4">
                 <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
@@ -853,7 +854,9 @@ const ChatPage = () => {
                 }
                 disabled={isLoading || isAnalyzingImage}
                 className={`h-12 sm:h-14 pr-28 sm:pr-32 rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500/20 disabled:opacity-50 text-base placeholder:text-slate-500 shadow-sm ${
-                  selectedImage ? 'border-green-300 focus:border-green-500 bg-green-50/30' : ''
+                  selectedImage
+                    ? "border-green-300 focus:border-green-500 bg-green-50/30"
+                    : ""
                 }`}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -861,11 +864,15 @@ const ChatPage = () => {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading || isAnalyzingImage}
                   className={`p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 ${
-                    selectedImage ? 'text-green-600 bg-green-100' : ''
+                    selectedImage ? "text-green-600 bg-green-100" : ""
                   }`}
                   title="Upload injury photo (JPG only)"
                 >
-                  <Camera className={`w-4 h-4 ${selectedImage ? 'animate-pulse' : ''}`} />
+                  <Camera
+                    className={`w-4 h-4 ${
+                      selectedImage ? "animate-pulse" : ""
+                    }`}
+                  />
                 </button>
 
                 {/* Voice Button with Status */}
@@ -874,17 +881,6 @@ const ChatPage = () => {
                     onVoiceCommand={handleVoiceCommand}
                     onListeningChange={setIsVoiceListening}
                   />
-
-                  {/* Voice Status Overlay */}
-                  {isVoiceListening && (
-                    <div className="absolute -top-16 right-0 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold z-20 shadow-lg animate-bounce">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
-                        🎤 LISTENING
-                      </div>
-                      <div className="absolute bottom-0 right-4 w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-red-600"></div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -898,7 +894,9 @@ const ChatPage = () => {
               }
               size="lg"
               className={`h-12 sm:h-14 px-4 sm:px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
-                selectedImage ? 'from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : ''
+                selectedImage
+                  ? "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  : ""
               }`}
             >
               {isLoading || isAnalyzingImage ? (
@@ -906,7 +904,7 @@ const ChatPage = () => {
               ) : (
                 <>
                   <span className="hidden sm:inline text-sm mr-2">
-                    {selectedImage ? 'Analyze' : 'Send'}
+                    {selectedImage ? "Analyze" : "Send"}
                   </span>
                   <SendHorizonal className="w-5 h-5" />
                 </>

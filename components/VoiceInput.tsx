@@ -338,10 +338,6 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
           <Mic className="h-3 w-3 text-red-600 animate-pulse" />
-          <span className="text-xs font-bold text-red-700">
-            🎤 LISTENING...{" "}
-            <span className="font-mono">{formatTimer(timer)}</span>
-          </span>
           {userLocation && (
             <span
               title={`Location: ${userLocation.lat.toFixed(
