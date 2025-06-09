@@ -39,15 +39,87 @@ interface ChatMessage {
   sender: "user" | "bot";
   text: string;
   timestamp: Date;
-  sessionId?: string;
+  imageUrl?: string;
   structuredData?: {
     header?: string;
     emergency?: string;
     steps?: string[];
     doctorAdvice?: string[];
-    faqs?: Array<{ question: string; answer: string }>;
+    faqs?: { question: string; answer: string }[];
+    enhanced_advice?: {
+      severity_assessment?: {
+        severity_level?: string;
+        can_treat_at_home?: boolean;
+        severity_score?: string;
+      };
+      home_remedies?: {
+        immediate_relief?: string[];
+        natural_treatments?: string[];
+        dietary_remedies?: string[];
+        lifestyle_adjustments?: string[];
+      };
+      needed_products?: {
+        pharmacy_items?: string[];
+        household_items?: string[];
+        herbal_supplements?: string[];
+        grocery_items?: string[];
+      };
+      step_by_step_treatment?: string[];
+      warning_signs?: string[];
+      recovery_timeline?: {
+        expected_improvement?: string;
+        full_recovery?: string;
+        monitoring_frequency?: string;
+      };
+      prevention_tips?: string[];
+    };
+    location_advice?: {
+      request_info?: {
+        latitude: number;
+        longitude: number;
+        condition_description: string;
+      };
+      analysis: {
+        severity_assessment: {
+          severity_level: string;
+          urgency: string;
+          recommended_action: string;
+          estimated_response_time?: string;
+        };
+        location_context: {
+          area_type: string;
+          medical_accessibility: string;
+          nearest_emergency_services: string;
+          traffic_conditions?: string;
+          weather_impact?: string;
+          population_density?: string;
+        };
+        risk_factors?: {
+          distance_to_hospital: string;
+          isolation_level: string;
+          communication_availability: string;
+        };
+        immediate_actions?: string[];
+        evacuation_plan?: {
+          transport_options: string[];
+          route_recommendations: string[];
+          estimated_time: string;
+        };
+      };
+      emergency_note: string;
+      local_resources?: {
+        nearby_hospitals: Array<{
+          name: string;
+          distance: string;
+          specialties: string[];
+          contact?: string;
+        }>;
+        emergency_contacts: string[];
+        local_services: string[];
+      };
+    };
   };
-  image?: string;
+  sessionId?: string;
 }
 
 const ChatPage = () => {
@@ -206,9 +278,9 @@ const ChatPage = () => {
       const structuredData = await jsonResponse.json();
 
       // Use the ref counter instead of Date.now()
-      const botMessage = {
+      const botMessage: ChatMessage = {
         id: ++messageIdRef.current,
-        sender: "bot" as const,
+        sender: "bot",
         text: aiResponseText,
         timestamp: new Date(),
         structuredData: structuredData,
@@ -218,9 +290,9 @@ const ChatPage = () => {
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       // Display error to user
-      const errorMessage = {
+      const errorMessage: ChatMessage = {
         id: ++messageIdRef.current,
-        sender: "bot" as const,
+        sender: "bot",
         text: `I'm sorry, I'm having trouble connecting to my services right now. For medical emergencies, please call your local emergency services immediately (911 in US, 108 in India). 
 
 For non-emergency situations, please try again in a moment or consult with a healthcare professional.`,
@@ -267,26 +339,92 @@ For non-emergency situations, please try again in a moment or consult with a hea
       const userMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "user",
-        text: input.trim() || "Here's an image of my injury",
+        text: input.trim() || "Please analyze this injury photo",
         timestamp: new Date(),
-        image: selectedImage,
+        imageUrl: selectedImage,
       };
 
       setMessages((prev) => [...prev, userMessage]);
-
-      const analysis = await analyzeImage(selectedImage);
-      const combinedMessage = input.trim()
-        ? `${input.trim()}\n\nImage Analysis: ${analysis}`
-        : `Image Analysis: ${analysis}`;
-
       setInput("");
       setSelectedImage(null);
 
-      await sendMessage(combinedMessage);
+      // Step 1: Send image to analysis API
+      const response = await fetch("/api/analyze-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          image: selectedImage,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 422) {
+          throw new Error(
+            errorData.error ||
+              "Invalid image format or missing data. Please ensure you're uploading a valid image."
+          );
+        }
+
+        throw new Error(
+          errorData.error || `Image analysis failed: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      const result =
+        data.analysis ||
+        data.description ||
+        data.result ||
+        data.message ||
+        "Image analysis completed";
+
+      // Step 2: Process through structured JSON API
+      const jsonResponse = await fetch("/api/json", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: result }),
+      });
+
+      if (!jsonResponse.ok) {
+        throw new Error(
+          `JSON processing failed with status: ${jsonResponse.status}`
+        );
+      }
+
+      const structuredData = await jsonResponse.json();
+
+      const botMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot",
+        text: response.analysis || "Analysis completed",
+        timestamp: new Date(),
+        structuredData: structuredData,
+        sessionId: response.session_id || "image_analysis",
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      // Error sending message with image
+      // Error handling...
+      const errorMessage: ChatMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot",
+        text: "I'm sorry, I couldn't analyze the image. Please try again or contact emergency services if this is urgent.",
+        timestamp: new Date(),
+        structuredData: undefined,
+        sessionId: "error",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setIsAnalyzingImage(false);
     }
   };
 
@@ -472,9 +610,9 @@ For non-emergency situations, please try again in a moment or consult with a hea
       console.log("Enhanced advice response:", data); // Debug log
       
       // Add enhanced advice as a new message with proper structure
-      const enhancedMessage = {
+      const enhancedMessage: ChatMessage = {
         id: ++messageIdRef.current,
-        sender: "bot" as const,
+        sender: "bot",
         text: `🏠 **Enhanced Treatment Plan**\n\nComprehensive home care guidance has been generated with detailed remedies, needed products, and recovery timeline.`,
         timestamp: new Date(),
         structuredData: {
@@ -523,9 +661,9 @@ For non-emergency situations, please try again in a moment or consult with a hea
       console.log("Location advice response:", data); // Debug log
       
       // Add location advice as a new message with proper structured data
-      const locationMessage = {
+      const locationMessage: ChatMessage = {
         id: ++messageIdRef.current,
-        sender: "bot" as const,
+        sender: "bot",
         text: `📍 **Location-Based Medical Assessment**\n\nComprehensive location analysis has been completed with risk assessment, local resources, and action plan.`,
         timestamp: new Date(),
         structuredData: {
@@ -815,9 +953,9 @@ For non-emergency situations, please try again in a moment or consult with a hea
                         <div className="flex items-center gap-2">
                           <SpeakButton
                             text={msg.text}
+                            structuredData={msg.structuredData}
                             className="text-xs text-slate-500 hover:text-indigo-600 transition-colors"
                           />
-                          
                           {/* Enhance Advice Button */}
                           {userLocation && !msg.text.includes("Enhanced Treatment Plan") && (
                             <Button
