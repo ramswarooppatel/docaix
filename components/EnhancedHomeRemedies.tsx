@@ -41,18 +41,18 @@ interface HomeRemediesProps {
       dietary_remedies?: string[];
       lifestyle_adjustments?: string[];
     };
-    needed_products: {
-      pharmacy_items: string[];
+    needed_products?: {
+      pharmacy_items?: string[];
       household_items?: string[];
       herbal_supplements?: string[];
       grocery_items?: string[];
     };
-    step_by_step_treatment: string[];
-    warning_signs: string[];
+    step_by_step_treatment?: string[];
+    warning_signs?: string[];
     recovery_timeline?: {
-      expected_improvement: string;
-      full_recovery: string;
-      monitoring_frequency: string;
+      expected_improvement?: string;
+      full_recovery?: string;
+      monitoring_frequency?: string;
     };
     prevention_tips?: string[];
   };

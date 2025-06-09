@@ -14,6 +14,7 @@ import { FAQ } from "./FAQ";
 import { EnhancedHomeRemedies } from "./EnhancedHomeRemedies";
 import { EnhancedLocationAssessment } from "./EnhancedLocationAssessment";
 import { SafeEnhancedLocationAssessment } from "./SafeEnhancedLocationAssessment";
+import { SafeEnhancedHomeRemedies } from "./SafeEnhancedHomeRemedies";
 
 interface EnhancedMessageDisplayProps {
   text?: string;
@@ -410,11 +411,14 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                       </div>
                     );
                   case "enhanced":
+                    console.log("Enhanced case - structuredData:", structuredData);
+                    console.log("Enhanced case - enhanced_advice:", structuredData?.enhanced_advice);
+                    
                     // Check if this is structured data with enhanced advice
                     if (structuredData && structuredData.enhanced_advice) {
                       return (
                         <div key={index} className="w-full">
-                          <EnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
+                          <SafeEnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
                         </div>
                       );
                     }
@@ -829,11 +833,14 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                       </div>
                     );
                   case "enhanced":
+                    console.log("Enhanced case - structuredData:", structuredData);
+                    console.log("Enhanced case - enhanced_advice:", structuredData?.enhanced_advice);
+                    
                     // Check if this is structured data with enhanced advice
                     if (structuredData && structuredData.enhanced_advice) {
                       return (
                         <div key={index} className="w-full">
-                          <EnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
+                          <SafeEnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
                         </div>
                       );
                     }
