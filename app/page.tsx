@@ -18,6 +18,7 @@ import {
   Sparkles,
   Activity,
   Building2,
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -74,50 +75,63 @@ const Home = () => {
 
             {/* Primary Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-              <Link href="/chat">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <MessageCircle className="w-5 h-5 mr-3" />
-                  Start Emergency Chat
-                  <ArrowRight className="w-5 h-5 ml-3" />
-                </Button>
+              {/* Health Profile Button */}
+              <Link href="/healthprofile">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200"
+              >
+                <Activity className="w-5 h-5 mr-3" />
+                Health Profile Analysis
+              </Button>
               </Link>
 
               {/* Add Hospitals Button */}
               <Link href="/hospitals">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200"
-                >
-                  <Building2 className="w-5 h-5 mr-3" />
-                  Find Nearby Hospitals
-                </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200"
+              >
+                <Building2 className="w-5 h-5 mr-3" />
+                Find Nearby Hospitals
+              </Button>
               </Link>
 
-              {/* Health Profile Button */}
-              <Link href="/healthprofile">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200"
-                >
-                  <Activity className="w-5 h-5 mr-3" />
-                  Health Profile Analysis
-                </Button>
+              {/* Start Emergency Chat Button (centered) */}
+              <Link href="/chat">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <MessageCircle className="w-5 h-5 mr-3" />
+                Start Emergency Chat
+                <ArrowRight className="w-5 h-5 ml-3" />
+              </Button>
               </Link>
 
               <Link href="/settings">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
-                >
-                  <Settings className="w-5 h-5 mr-3" />
-                  Setup Emergency Contacts
-                </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+              >
+                <Settings className="w-5 h-5 mr-3" />
+                Setup Emergency Contacts
+              </Button>
+              </Link>
+              
+              {/* First Aid Box CTA */}
+              <Link href="/firstaidbox">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200"
+              >
+                <Package className="w-5 h-5 mr-3" />
+                First Aid Box Guide
+              </Button>
               </Link>
             </div>
           </div>
@@ -235,6 +249,20 @@ const Home = () => {
                 critical situations.
               </p>
             </div>
+
+            {/* First Aid Box Setup */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+                <Package className="w-6 h-6 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">
+                First Aid Box Setup
+              </h3>
+              <p className="text-slate-600 leading-relaxed">
+                Complete guide to building and maintaining first aid kits for
+                home, car, office, and travel.
+              </p>
+            </div>
           </div>
 
           {/* Emergency Notice */}
@@ -284,6 +312,18 @@ const Home = () => {
                 >
                   <Activity className="w-5 h-5 mr-3" />
                   Analyze Health Profile
+                </Button>
+              </Link>
+
+              {/* First Aid Box CTA */}
+              <Link href="/firstaidbox">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200"
+                >
+                  <Package className="w-5 h-5 mr-3" />
+                  First Aid Box Guide
                 </Button>
               </Link>
             </div>

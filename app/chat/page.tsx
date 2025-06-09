@@ -22,6 +22,7 @@ import {
   MicOff,
   Activity,
   Building2,
+  Package,
   Camera,
   X,
 } from "lucide-react";
@@ -503,6 +504,18 @@ For non-emergency situations, please try again in a moment or consult with a hea
               </Button>
             </Link>
 
+            {/* First Aid Box Button - NEW */}
+            <Link href="/firstaidbox">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-purple-100 transition-colors"
+                title="First Aid Box Guide"
+              >
+                <Package className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
+              </Button>
+            </Link>
+
             <Link href="/settings">
               <Button
                 variant="ghost"
@@ -581,6 +594,17 @@ For non-emergency situations, please try again in a moment or consult with a hea
                   >
                     <Heart className="w-4 h-4 mr-2" />
                     Health Analysis
+                  </Button>
+                </Link>
+
+                {/* First Aid Box Quick Action - NEW */}
+                <Link href="/firstaidbox">
+                  <Button
+                    variant="outline"
+                    className="rounded-full px-4 py-2 text-sm hover:bg-indigo-50 hover:border-indigo-300 transition-all"
+                  >
+                    <Package className="w-4 h-4 mr-2" />
+                    First Aid Kit
                   </Button>
                 </Link>
               </div>
