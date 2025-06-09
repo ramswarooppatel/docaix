@@ -520,13 +520,17 @@ For non-emergency situations, please try again in a moment or consult with a hea
       const data = await response.json();
       setLocationAdvice(data);
       
-      // Add location advice as a new message
+      console.log("Location advice response:", data); // Debug log
+      
+      // Add location advice as a new message with proper structured data
       const locationMessage = {
         id: ++messageIdRef.current,
         sender: "bot" as const,
-        text: `📍 **Location-Based Medical Assessment**\n\n**Severity Analysis:**\n- Level: ${data.analysis.severity_assessment.severity_level}\n- Urgency: ${data.analysis.severity_assessment.urgency}\n- Action: ${data.analysis.severity_assessment.recommended_action}\n\n**Your Location Context:**\n- Area Type: ${data.analysis.location_context.area_type}\n- Medical Access: ${data.analysis.location_context.medical_accessibility}\n- Emergency Services: ${data.analysis.location_context.nearest_emergency_services}\n\n${data.emergency_note}`,
+        text: `📍 **Location-Based Medical Assessment**\n\nComprehensive location analysis has been completed with risk assessment, local resources, and action plan.`,
         timestamp: new Date(),
-        structuredData: data,
+        structuredData: {
+          location_advice: data // Pass the complete API response
+        },
         sessionId: "location",
       };
 

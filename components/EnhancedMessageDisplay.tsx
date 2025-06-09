@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { FAQ } from "./FAQ";
 import { EnhancedHomeRemedies } from "./EnhancedHomeRemedies";
+import { EnhancedLocationAssessment } from "./EnhancedLocationAssessment";
+import { SafeEnhancedLocationAssessment } from "./SafeEnhancedLocationAssessment";
 
 interface EnhancedMessageDisplayProps {
   text?: string;
@@ -47,6 +49,51 @@ interface EnhancedMessageDisplayProps {
         monitoring_frequency?: string;
       };
       prevention_tips?: string[];
+    };
+    location_advice?: {
+      request_info?: {
+        latitude: number;
+        longitude: number;
+        condition_description: string;
+      };
+      analysis: {
+        severity_assessment: {
+          severity_level: string;
+          urgency: string;
+          recommended_action: string;
+          estimated_response_time?: string;
+        };
+        location_context: {
+          area_type: string;
+          medical_accessibility: string;
+          nearest_emergency_services: string;
+          traffic_conditions?: string;
+          weather_impact?: string;
+          population_density?: string;
+        };
+        risk_factors?: {
+          distance_to_hospital: string;
+          isolation_level: string;
+          communication_availability: string;
+        };
+        immediate_actions?: string[];
+        evacuation_plan?: {
+          transport_options: string[];
+          route_recommendations: string[];
+          estimated_time: string;
+        };
+      };
+      emergency_note: string;
+      local_resources?: {
+        nearby_hospitals: Array<{
+          name: string;
+          distance: string;
+          specialties: string[];
+          contact?: string;
+        }>;
+        emergency_contacts: string[];
+        local_services: string[];
+      };
     };
   };
   className?: string;
@@ -398,6 +445,19 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                       </div>
                     );
                   case "location":
+                    console.log("Location case - structuredData:", structuredData);
+                    console.log("Location case - location_advice:", structuredData?.location_advice);
+                    
+                    // Check if this is structured data with location advice
+                    if (structuredData && structuredData.location_advice) {
+                      return (
+                        <div key={index} className="w-full">
+                          <SafeEnhancedLocationAssessment locationAdvice={structuredData.location_advice} />
+                        </div>
+                      );
+                    }
+
+                    // Fallback to original rendering
                     return (
                       <div
                         key={index}
@@ -804,6 +864,16 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                       </div>
                     );
                   case "location":
+                    // Check if this is structured data with location advice
+                    if (structuredData && structuredData.location_advice) {
+                      return (
+                        <div key={index} className="w-full">
+                          <SafeEnhancedLocationAssessment locationAdvice={structuredData.location_advice} />
+                        </div>
+                      );
+                    }
+
+                    // Fallback to original rendering
                     return (
                       <div
                         key={index}
