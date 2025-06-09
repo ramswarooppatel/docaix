@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface UseTextToSpeechOptions {
   rate?: number;
@@ -14,8 +14,12 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
+  const manuallyPausedRef = useRef(false); // Track manual pause state
+  const hasUtteranceRef = useRef(false); // Track if we have an active utterance
+  
+  // Using your custom defaults from the first code
   const {
     rate = 0.85,
     pitch = 1.1,
@@ -23,56 +27,43 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
     voice = null
   } = options;
 
-  // Function to clean text for speech synthesis
+  // Clean and format the text (from first code)
   const cleanTextForSpeech = useCallback((text: string): string => {
     return text
-      // Remove asterisks used for bold/italic formatting
-      .replace(/\*\*/g, '') // Remove ** (bold)
-      .replace(/\*/g, '') // Remove * (italic)
-      
-      // Remove common emojis
-      .replace(/🚨|😕|🤔|🚑|🚿|🤲|💡|📍|🕒|⌄|❤️|🏥|💊|🩺|🔥|❄️|⚠️|✅|❌|🆘|📞|🎯/g, '')
-      
-      // Remove emoji ranges (most common emoji blocks)
-      .replace(/[\u{1F600}-\u{1F64F}]/gu, '') // Emoticons
-      .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // Symbols & Pictographs
-      .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // Transport & Map
-      .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // Flags
-      .replace(/[\u{2600}-\u{26FF}]/gu, '') // Miscellaneous Symbols
-      .replace(/[\u{2700}-\u{27BF}]/gu, '') // Dingbats
-      
-      // Clean up formatting symbols
-      .replace(/[•·]/g, '') // Remove bullet points
-      .replace(/#+/g, '') // Remove hash symbols
-      .replace(/_{2,}/g, '') // Remove underscores
-      .replace(/={2,}/g, '') // Remove equals
-      .replace(/\|/g, '') // Remove pipes
-      
-      // Clean up spacing and punctuation
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .replace(/\.\s*\./g, '.') // Remove duplicate periods
-      .replace(/,\s*,/g, ',') // Remove duplicate commas
-      .replace(/:\s*:/g, ':') // Remove duplicate colons
-      
-      // Add natural pauses
-      .replace(/\./g, '. ') // Add pause after periods
-      .replace(/,/g, ', ') // Add pause after commas
-      .replace(/:/g, ': ') // Add pause after colons
-      .replace(/;/g, '; ') // Add pause after semicolons
-      .replace(/\n/g, '   ') // Replace newlines with longer pauses
-      
-      // Add emphasis pauses around important terms
-      .replace(/\b(emergency|urgent|important|warning|caution|danger|critical|immediately|call|help)\b/gi, 
-        (match) => ` ${match} `)
-      
-      // Clean up extra spaces
-      .replace(/\s+/g, ' ')
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .replace(/🚨|😕|🤔|🚑|🚿|🤲|💡|📍|🕒|⌄|❤️|🏥|💊|🩺|🔥|❄️|⚠️|✅|❌|🆘|📞|🎯/g, "")
+      .replace(/[\u{1F600}-\u{1F64F}]/gu, "")
+      .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")
+      .replace(/[\u{1F680}-\u{1F6FF}]/gu, "")
+      .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, "")
+      .replace(/[\u{2600}-\u{26FF}]/gu, "")
+      .replace(/[\u{2700}-\u{27BF}]/gu, "")
+      .replace(/[•·]/g, "")
+      .replace(/#+/g, "")
+      .replace(/_{2,}/g, "")
+      .replace(/={2,}/g, "")
+      .replace(/\|/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/\.\s*\./g, ".")
+      .replace(/,\s*,/g, ",")
+      .replace(/:\s*:/g, ":")
+      .replace(/\./g, ". ")
+      .replace(/,/g, ", ")
+      .replace(/:/g, ": ")
+      .replace(/;/g, "; ")
+      .replace(/\n/g, "   ")
+      .replace(
+        /\b(emergency|urgent|important|warning|caution|danger|critical|immediately|call|help)\b/gi,
+        (match) => ` ${match} `
+      )
+      .replace(/\s+/g, " ")
       .trim();
   }, []);
 
-  // Find best female voice function
+  // Voice selection (from first code)
   const findBestFemaleVoice = useCallback((availableVoices: SpeechSynthesisVoice[]) => {
-    const preferredFemaleVoices = [
+    const preferred = [
       'Google UK English Female',
       'Google US English Female',
       'Google Australian English Female',
@@ -89,49 +80,22 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
       'Female'
     ];
 
-    for (const preferredName of preferredFemaleVoices) {
-      const exactMatch = availableVoices.find(v => 
-        v.name === preferredName && v.lang.startsWith('en')
-      );
-      if (exactMatch) {
-        console.log('Selected preferred female voice:', exactMatch.name);
-        return exactMatch;
-      }
+    for (const name of preferred) {
+      const match = availableVoices.find(v => v.name === name && v.lang.startsWith('en'));
+      if (match) return match;
     }
 
-    const femaleKeywords = ['female', 'woman', 'girl', 'zira', 'hazel', 'susan', 'samantha', 'victoria', 'karen', 'moira'];
-    const femaleVoice = availableVoices.find(v => 
-      v.lang.startsWith('en') && 
-      femaleKeywords.some(keyword => v.name.toLowerCase().includes(keyword))
+    const keywords = ['female', 'woman', 'girl', 'zira', 'hazel', 'susan', 'samantha', 'victoria', 'karen', 'moira'];
+    const keywordMatch = availableVoices.find(v =>
+      v.lang.startsWith('en') &&
+      keywords.some(keyword => v.name.toLowerCase().includes(keyword))
     );
-    
-    if (femaleVoice) {
-      console.log('Selected female voice by keyword:', femaleVoice.name);
-      return femaleVoice;
-    }
+    if (keywordMatch) return keywordMatch;
 
-    const likelyFemaleVoice = availableVoices.find(v => 
-      v.lang.startsWith('en') && (
-        v.name.includes('2') || 
-        v.name.includes('B') || 
-        v.name.toLowerCase().includes('natural')
-      )
-    );
-
-    if (likelyFemaleVoice) {
-      console.log('Selected likely female voice:', likelyFemaleVoice.name);
-      return likelyFemaleVoice;
-    }
-
-    const defaultEnglishVoice = availableVoices.find(v => v.lang.startsWith('en'));
-    if (defaultEnglishVoice) {
-      console.log('Selected default English voice:', defaultEnglishVoice.name);
-      return defaultEnglishVoice;
-    }
-
-    return null;
+    return availableVoices.find(v => v.lang.startsWith('en')) || null;
   }, []);
 
+  // Check if speech synthesis is supported
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       setIsSupported(true);
@@ -139,95 +103,132 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
       const updateVoices = () => {
         const availableVoices = speechSynthesis.getVoices();
         setVoices(availableVoices);
-        console.log('Available voices:', availableVoices.map(v => `${v.name} (${v.lang})`));
       };
 
       updateVoices();
-      speechSynthesis.addEventListener('voiceschanged', updateVoices);
-      
-      return () => {
-        speechSynthesis.removeEventListener('voiceschanged', updateVoices);
-      };
+      speechSynthesis.onvoiceschanged = updateVoices;
     }
+  }, []);
+
+  // FIXED: Proper state monitoring that respects manual pause
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // If we manually paused, don't let the interval override our state
+      if (manuallyPausedRef.current && hasUtteranceRef.current) {
+        setIsSpeaking(true);
+        setIsPaused(true);
+        return;
+      }
+
+      // Normal state detection when not manually paused
+      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        setIsSpeaking(true);
+        setIsPaused(false);
+      } else if (speechSynthesis.speaking && speechSynthesis.paused) {
+        setIsSpeaking(true);
+        setIsPaused(true);
+      } else if (!hasUtteranceRef.current) {
+        // Only reset if we truly have no active utterance
+        setIsSpeaking(false);
+        setIsPaused(false);
+        manuallyPausedRef.current = false;
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
   }, []);
 
   const speak = useCallback((text: string) => {
     if (!isSupported || !text.trim()) return;
 
-    if (speechSynthesis.speaking) {
-      speechSynthesis.cancel();
-    }
-
-    // Clean the text for speech
+    // Reset all states
+    manuallyPausedRef.current = false;
+    hasUtteranceRef.current = false;
+    
+    // Stop any current speech
+    speechSynthesis.cancel();
+    
+    // Use the cleaned text
     const cleanedText = cleanTextForSpeech(text);
-    console.log('Original text:', text);
-    console.log('Cleaned text for speech:', cleanedText);
-
     const utterance = new SpeechSynthesisUtterance(cleanedText);
-    utteranceRef.current = utterance;
-
+    
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = volume;
-
+    
+    // Use voice selection logic from first code
     if (voice) {
       utterance.voice = voice;
     } else if (voices.length > 0) {
-      const selectedVoice = findBestFemaleVoice(voices);
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
+      const selected = findBestFemaleVoice(voices);
+      if (selected) utterance.voice = selected;
     }
 
     utterance.onstart = () => {
+      hasUtteranceRef.current = true;
       setIsSpeaking(true);
       setIsPaused(false);
-      console.log('Started speaking with voice:', utterance.voice?.name || 'default');
     };
 
     utterance.onend = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
-      utteranceRef.current = null;
-      console.log('Finished speaking');
-    };
-
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
+      hasUtteranceRef.current = false;
+      manuallyPausedRef.current = false;
       setIsSpeaking(false);
       setIsPaused(false);
       utteranceRef.current = null;
     };
 
-    utterance.onpause = () => {
-      setIsPaused(true);
-    };
-
-    utterance.onresume = () => {
+    utterance.onerror = () => {
+      hasUtteranceRef.current = false;
+      manuallyPausedRef.current = false;
+      setIsSpeaking(false);
       setIsPaused(false);
+      utteranceRef.current = null;
     };
 
+    utteranceRef.current = utterance;
     speechSynthesis.speak(utterance);
-  }, [isSupported, rate, pitch, volume, voice, voices, findBestFemaleVoice, cleanTextForSpeech]);
+  }, [isSupported, rate, pitch, volume, voice, voices, cleanTextForSpeech, findBestFemaleVoice]);
 
   const stop = useCallback(() => {
-    if (speechSynthesis.speaking) {
-      speechSynthesis.cancel();
-    }
+    speechSynthesis.cancel();
+    hasUtteranceRef.current = false;
+    manuallyPausedRef.current = false;
     setIsSpeaking(false);
     setIsPaused(false);
     utteranceRef.current = null;
   }, []);
 
+  // FIXED: Pause function that maintains state properly
   const pause = useCallback(() => {
-    if (speechSynthesis.speaking && !speechSynthesis.paused) {
+    if (speechSynthesis.speaking && !speechSynthesis.paused && hasUtteranceRef.current) {
       speechSynthesis.pause();
+      manuallyPausedRef.current = true; // Mark as manually paused
+      setIsPaused(true);
+      setIsSpeaking(true);
     }
   }, []);
 
+  // FIXED: Resume function that clears manual pause state
   const resume = useCallback(() => {
-    if (speechSynthesis.paused) {
+    if (manuallyPausedRef.current && hasUtteranceRef.current) {
       speechSynthesis.resume();
+      manuallyPausedRef.current = false; // Clear manual pause flag
+      setIsPaused(false);
+      setIsSpeaking(true);
+    }
+  }, []);
+
+  // Enhanced playAgain function
+  const playAgain = useCallback(() => {
+    if (manuallyPausedRef.current && hasUtteranceRef.current) {
+      speechSynthesis.resume();
+      manuallyPausedRef.current = false;
+      setIsPaused(false);
+      setIsSpeaking(true);
+      console.log("Speech resumed from pause");
+    } else {
+      console.warn("No paused speech to resume.");
     }
   }, []);
 
@@ -239,6 +240,7 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
     speak,
     stop,
     pause,
-    resume
+    resume,
+    playAgain,
   };
 }
