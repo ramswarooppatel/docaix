@@ -27,11 +27,15 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
     voice = null
   } = options;
 
-  // Clean and format the text (from first code)
+  // Clean and format the text - FIXED VERSION
   const cleanTextForSpeech = useCallback((text: string): string => {
     return text
+      // Remove markdown formatting
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
+       .replace(/\++/g, "")
+       
+      // Remove emojis and symbols
       .replace(/🚨|😕|🤔|🚑|🚿|🤲|💡|📍|🕒|⌄|❤️|🏥|💊|🩺|🔥|❄️|⚠️|✅|❌|🆘|📞|🎯/g, "")
       .replace(/[\u{1F600}-\u{1F64F}]/gu, "")
       .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")
@@ -39,24 +43,42 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
       .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, "")
       .replace(/[\u{2600}-\u{26FF}]/gu, "")
       .replace(/[\u{2700}-\u{27BF}]/gu, "")
+      
+      // Remove bullet points and markdown symbols
       .replace(/[•·]/g, "")
       .replace(/#+/g, "")
       .replace(/_{2,}/g, "")
       .replace(/={2,}/g, "")
       .replace(/\|/g, "")
+      
+      // Remove multiple + symbols (THIS WAS MISSING!)
+      .replace(/\+{2,}/g, "")
+      .replace(/\++/g, "")
+      
+      // Clean up whitespace first
       .replace(/\s+/g, " ")
+      
+      // Fix duplicate punctuation
       .replace(/\.\s*\./g, ".")
       .replace(/,\s*,/g, ",")
       .replace(/:\s*:/g, ":")
-      .replace(/\./g, ". ")
-      .replace(/,/g, ", ")
-      .replace(/:/g, ": ")
-      .replace(/;/g, "; ")
+      
+      // Add proper spacing to punctuation ONLY for sentence-ending periods
+      .replace(/\.(?=\s*[A-Z])/g, ". ") // Only add space after periods before capital letters
+      .replace(/,(?=\S)/g, ", ") // Add space after commas only if not followed by space
+      .replace(/:(?=\S)/g, ": ") // Add space after colons only if not followed by space
+      .replace(/;(?=\S)/g, "; ") // Add space after semicolons only if not followed by space
+      
+      // Replace newlines with pauses
       .replace(/\n/g, "   ")
+      
+      // Emphasize important words
       .replace(
         /\b(emergency|urgent|important|warning|caution|danger|critical|immediately|call|help)\b/gi,
         (match) => ` ${match} `
       )
+      
+      // Final cleanup
       .replace(/\s+/g, " ")
       .trim();
   }, []);
