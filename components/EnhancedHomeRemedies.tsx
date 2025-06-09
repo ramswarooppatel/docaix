@@ -24,6 +24,7 @@ import {
   Plus,
   ChevronRight,
   ExternalLink,
+  X,
 } from "lucide-react";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 
@@ -83,7 +84,7 @@ export const EnhancedHomeRemedies: React.FC<HomeRemediesProps> = ({
   }
 
   // Add TTS hook
-  const { speakHomeRemedies, isSpeaking, isPaused, pause, resume, stop } = useTextToSpeech();
+  const { speak, isSpeaking, isPaused, pause, resume, stop } = useTextToSpeech();
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections);
@@ -121,26 +122,105 @@ export const EnhancedHomeRemedies: React.FC<HomeRemediesProps> = ({
     { id: "timeline", label: "Recovery", icon: Timer },
   ];
 
+  const handleSpeakHomeRemedies = () => {
+    const remediesText = `
+      Enhanced home treatment plan for ${enhancedAdvice.severity_assessment.severity_level} severity condition.
+      
+      ${enhancedAdvice.severity_assessment.can_treat_at_home ? 
+        "This condition can be treated at home with proper care." : 
+        "Medical attention may be required for this condition."}
+      
+      Immediate relief options: ${enhancedAdvice.home_remedies?.immediate_relief?.slice(0, 3).join('. ') || 'Consult healthcare provider.'}
+      
+      ${enhancedAdvice.needed_products?.pharmacy_items ? 
+        `Recommended pharmacy items: ${enhancedAdvice.needed_products.pharmacy_items.slice(0, 3).join(', ')}.` : ''}
+      
+      ${enhancedAdvice.step_by_step_treatment ? 
+        `Treatment steps: ${enhancedAdvice.step_by_step_treatment.slice(0, 3).join('. ')}.` : ''}
+      
+      ${enhancedAdvice.warning_signs ? 
+        `Warning signs to watch for: ${enhancedAdvice.warning_signs.slice(0, 2).join('. ')}.` : ''}
+      
+      Remember to seek professional medical help if symptoms worsen or persist.
+    `;
+
+    if (isSpeaking) {
+      if (isPaused) {
+        resume();
+      } else {
+        pause();
+      }
+    } else {
+      speak(remediesText);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Severity Assessment */}
       <Card className={`border-l-4 ${getSeverityColor(enhancedAdvice.severity_assessment.severity_level)}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Home className="w-6 h-6 text-green-600" />
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Home className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">Enhanced Home Treatment Plan</h3>
+                  <p className="text-sm text-slate-600 mt-1">Comprehensive care guidance with natural remedies</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800">Enhanced Home Treatment Plan</h3>
-                <p className="text-sm text-slate-600 mt-1">Comprehensive care guidance for your condition</p>
+              
+              <div className="flex items-center gap-3">
+                {/* Speech Control Button */}
+                <Button
+                  onClick={handleSpeakHomeRemedies}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  {isSpeaking ? (
+                    isPaused ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                        <span>Resume</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <span>Pause</span>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8 5v10l5-5-5-5z"/>
+                      </svg>
+                      <span>Listen</span>
+                    </>
+                  )}
+                </Button>
+
+                {/* Stop Button (when speaking) */}
+                {isSpeaking && (
+                  <Button
+                    onClick={stop}
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+
+                <div className={`px-3 py-1 rounded-full border ${getSeverityColor(enhancedAdvice.severity_assessment.severity_level)}`}>
+                  <span className="text-sm font-medium">
+                    {enhancedAdvice.severity_assessment.severity_level} Severity
+                  </span>
+                </div>
               </div>
             </CardTitle>
-            <div className={`px-3 py-1 rounded-full border ${getSeverityColor(enhancedAdvice.severity_assessment.severity_level)}`}>
-              <span className="text-sm font-medium">
-                {enhancedAdvice.severity_assessment.severity_level} Severity
-              </span>
-            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0">

@@ -9,13 +9,22 @@ import { extractSpeakableContent } from '../utils/textUtils';
 
 export interface SpeakButtonProps {
   text: string;
-  structuredData?: any;
+  structuredData?: {
+    header?: string;
+    emergency?: string;
+    steps?: string[];
+    doctorAdvice?: string[];
+    faqs?: { question: string; answer: string }[];
+    enhanced_advice?: any;
+    location_advice?: any;
+  };
   className?: string;
   size?: 'sm' | 'default' | 'lg';
 }
 
 const SpeakButton: React.FC<SpeakButtonProps> = ({ 
   text, 
+  structuredData,
   className = "",
   size = "sm" 
 }) => {
@@ -73,13 +82,15 @@ const SpeakButton: React.FC<SpeakButtonProps> = ({
   const handleSpeak = () => {
     if (!text) return;
     
+    // Use the existing text processing logic
+    const speakableText = extractSpeakableContent ? extractSpeakableContent(text) : text;
+    
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
       stop();
       return;
     }
     
-    speak(text);
+    speak(speakableText);
   };
 
   return (
