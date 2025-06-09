@@ -30,11 +30,21 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
   // Clean and format the text - FIXED VERSION
   const cleanTextForSpeech = useCallback((text: string): string => {
     return text
+      // Remove FAQ sections completely - ADD THIS FIRST
+      .replace(/Some FAQs relevant[\s\S]*$/i, "")
+      .replace(/Frequently Asked Questions[\s\S]*$/i, "")
+      .replace(/^Q\d*:\s.*$/gm, "")
+      .replace(/^A\d*:\s.*$/gm, "")
+      
+      // Stop reading at Enhanced Treatment Plan or Location-Based Assessment
+      .replace(/🏠 \*\*Enhanced Treatment Plan\*\*[\s\S]*$/i, "")
+      .replace(/📍 \*\*Location-Based Medical Assessment\*\*[\s\S]*$/i, "")
+      
       // Remove markdown formatting
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
-       .replace(/\++/g, "")
-       
+      .replace(/\++/g, "")
+      
       // Remove emojis and symbols
       .replace(/🚨|😕|🤔|🚑|🚿|🤲|💡|📍|🕒|⌄|❤️|🏥|💊|🩺|🔥|❄️|⚠️|✅|❌|🆘|📞|🎯/g, "")
       .replace(/[\u{1F600}-\u{1F64F}]/gu, "")

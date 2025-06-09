@@ -7,8 +7,11 @@ import {
   Info,
   Heart,
   Stethoscope,
+  MapPin,
+  Home,
 } from "lucide-react";
 import { FAQ } from "./FAQ";
+import { EnhancedHomeRemedies } from "./EnhancedHomeRemedies";
 
 interface EnhancedMessageDisplayProps {
   text?: string;
@@ -18,6 +21,33 @@ interface EnhancedMessageDisplayProps {
     steps?: string[];
     doctorAdvice?: string[];
     faqs?: { question: string; answer: string }[];
+    enhanced_advice?: {
+      severity_assessment?: {
+        severity_level?: string;
+        can_treat_at_home?: boolean;
+        severity_score?: string;
+      };
+      home_remedies?: {
+        immediate_relief?: string[];
+        natural_treatments?: string[];
+        dietary_remedies?: string[];
+        lifestyle_adjustments?: string[];
+      };
+      needed_products?: {
+        pharmacy_items?: string[];
+        household_items?: string[];
+        herbal_supplements?: string[];
+        grocery_items?: string[];
+      };
+      step_by_step_treatment?: string[];
+      warning_signs?: string[];
+      recovery_timeline?: {
+        expected_improvement?: string;
+        full_recovery?: string;
+        monitoring_frequency?: string;
+      };
+      prevention_tips?: string[];
+    };
   };
   className?: string;
 }
@@ -141,7 +171,7 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
     console.log("Using structured data:", structuredData);
 
     const sections: Array<{
-      type: "header" | "emergency" | "steps" | "advice";
+      type: "header" | "emergency" | "steps" | "advice" | "enhanced" | "location";
       content: string;
       icon?: React.ReactNode;
       color: string;
@@ -191,6 +221,30 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
         type: "advice",
         content: structuredData.doctorAdvice.join("|||"),
         icon: <Stethoscope className="w-4 h-4" />,
+        color: "text-purple-700",
+        bgColor: "bg-purple-50",
+        borderColor: "border-purple-200",
+      });
+    }
+
+    // Handle Enhanced Advice
+    if (text && text.includes("Enhanced Treatment Plan")) {
+      sections.push({
+        type: "enhanced",
+        content: text,
+        icon: <Home className="w-4 h-4" />,
+        color: "text-green-700",
+        bgColor: "bg-green-50",
+        borderColor: "border-green-200",
+      });
+    }
+
+    // Handle Location-Based Advice
+    if (text && text.includes("Location-Based Medical Assessment")) {
+      sections.push({
+        type: "location",
+        content: text,
+        icon: <MapPin className="w-4 h-4" />,
         color: "text-purple-700",
         bgColor: "bg-purple-50",
         borderColor: "border-purple-200",
@@ -308,6 +362,66 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                         </div>
                       </div>
                     );
+                  case "enhanced":
+                    // Check if this is structured data with enhanced advice
+                    if (structuredData && structuredData.enhanced_advice) {
+                      return (
+                        <div key={index} className="w-full">
+                          <EnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
+                        </div>
+                      );
+                    }
+
+                    // Fallback to original rendering
+                    return (
+                      <div
+                        key={index}
+                        className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`${section.color} flex-shrink-0 mt-0.5`}
+                          >
+                            {section.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div
+                              className={`font-semibold mb-3 ${section.color}`}
+                            >
+                              Enhanced Treatment Plan
+                            </div>
+                            <div className={section.color}>
+                              {formatContent(section.content, section.type)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  case "location":
+                    return (
+                      <div
+                        key={index}
+                        className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`${section.color} flex-shrink-0 mt-0.5`}
+                          >
+                            {section.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div
+                              className={`font-semibold mb-3 ${section.color}`}
+                            >
+                              Location-Based Assessment
+                            </div>
+                            <div className={section.color}>
+                              {formatContent(section.content, section.type)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
                   default:
                     return null;
                 }
@@ -349,7 +463,9 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
           | "info"
           | "symptoms"
           | "advice"
-          | "faqs";
+          | "faqs"
+          | "enhanced"
+          | "location";
         content: string;
         icon?: React.ReactNode;
         color: string;
@@ -644,6 +760,66 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                               className={`font-semibold mb-3 ${section.color}`}
                             >
                               When to See a Doctor
+                            </div>
+                            <div className={section.color}>
+                              {formatContent(section.content, section.type)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  case "enhanced":
+                    // Check if this is structured data with enhanced advice
+                    if (structuredData && structuredData.enhanced_advice) {
+                      return (
+                        <div key={index} className="w-full">
+                          <EnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
+                        </div>
+                      );
+                    }
+
+                    // Fallback to original rendering
+                    return (
+                      <div
+                        key={index}
+                        className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`${section.color} flex-shrink-0 mt-0.5`}
+                          >
+                            {section.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div
+                              className={`font-semibold mb-3 ${section.color}`}
+                            >
+                              Enhanced Treatment Plan
+                            </div>
+                            <div className={section.color}>
+                              {formatContent(section.content, section.type)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  case "location":
+                    return (
+                      <div
+                        key={index}
+                        className={`rounded-lg border-l-4 p-4 ${section.bgColor} ${section.borderColor} shadow-sm`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`${section.color} flex-shrink-0 mt-0.5`}
+                          >
+                            {section.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div
+                              className={`font-semibold mb-3 ${section.color}`}
+                            >
+                              Location-Based Assessment
                             </div>
                             <div className={section.color}>
                               {formatContent(section.content, section.type)}

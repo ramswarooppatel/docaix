@@ -13,6 +13,10 @@ import {
   RotateCcw,
   Bot,
   User,
+  MapPin,
+  Clipboard,
+  ClipboardCheck,
+  Home,
   Sparkles,
   Brain,
   Heart,
@@ -66,6 +70,12 @@ const ChatPage = () => {
   const [micPermission, setMicPermission] = useState<
     "granted" | "denied" | "unknown"
   >("unknown");
+
+  // New state variables
+  const [isEnhancingAdvice, setIsEnhancingAdvice] = useState(false);
+  const [isGettingLocationAdvice, setIsGettingLocationAdvice] = useState(false);
+  const [enhancedAdvice, setEnhancedAdvice] = useState<any>(null);
+  const [locationAdvice, setLocationAdvice] = useState<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -430,6 +440,105 @@ For non-emergency situations, please try again in a moment or consult with a hea
     reader.readAsDataURL(file);
   };
 
+  // New functions for enhanced advice and location-based advice
+  const enhanceAdvice = async (aiAdvice: string) => {
+    if (!userLocation) {
+      alert("Location is required for enhanced advice. Please enable location access.");
+      return;
+    }
+
+    try {
+      setIsEnhancingAdvice(true);
+      
+      const response = await fetch("/api/enhance-advice", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ai_advice: aiAdvice,
+          latitude: userLocation.lat,
+          longitude: userLocation.lng,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to enhance advice");
+      }
+
+      const data = await response.json();
+      setEnhancedAdvice(data);
+      
+      console.log("Enhanced advice response:", data); // Debug log
+      
+      // Add enhanced advice as a new message with proper structure
+      const enhancedMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot" as const,
+        text: `🏠 **Enhanced Treatment Plan**\n\nComprehensive home care guidance has been generated with detailed remedies, needed products, and recovery timeline.`,
+        timestamp: new Date(),
+        structuredData: {
+          enhanced_advice: data.enhanced_advice // Make sure this matches the API response structure
+        },
+        sessionId: "enhanced",
+      };
+
+      setMessages((prev) => [...prev, enhancedMessage]);
+    } catch (error) {
+      console.error("Enhancement error:", error);
+      alert("Failed to enhance advice. Please try again.");
+    } finally {
+      setIsEnhancingAdvice(false);
+    }
+  };
+
+  const getLocationBasedAdvice = async (condition: string) => {
+    if (!userLocation) {
+      alert("Location is required for location-based advice. Please enable location access.");
+      return;
+    }
+
+    try {
+      setIsGettingLocationAdvice(true);
+      
+      const response = await fetch("/api/location-advice", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          latitude: userLocation.lat,
+          longitude: userLocation.lng,
+          condition_description: condition,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get location advice");
+      }
+
+      const data = await response.json();
+      setLocationAdvice(data);
+      
+      // Add location advice as a new message
+      const locationMessage = {
+        id: ++messageIdRef.current,
+        sender: "bot" as const,
+        text: `📍 **Location-Based Medical Assessment**\n\n**Severity Analysis:**\n- Level: ${data.analysis.severity_assessment.severity_level}\n- Urgency: ${data.analysis.severity_assessment.urgency}\n- Action: ${data.analysis.severity_assessment.recommended_action}\n\n**Your Location Context:**\n- Area Type: ${data.analysis.location_context.area_type}\n- Medical Access: ${data.analysis.location_context.medical_accessibility}\n- Emergency Services: ${data.analysis.location_context.nearest_emergency_services}\n\n${data.emergency_note}`,
+        timestamp: new Date(),
+        structuredData: data,
+        sessionId: "location",
+      };
+
+      setMessages((prev) => [...prev, locationMessage]);
+    } catch (error) {
+      console.error("Location advice error:", error);
+      alert("Failed to get location-based advice. Please try again.");
+    } finally {
+      setIsGettingLocationAdvice(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
       {/* Header */}
@@ -607,6 +716,31 @@ For non-emergency situations, please try again in a moment or consult with a hea
                     First Aid Kit
                   </Button>
                 </Link>
+
+                {/* New Quick Actions for Enhanced Advice and Location Analysis */}
+                <Button
+                  onClick={() => {
+                    if (userLocation) {
+                      getLocationBasedAdvice("I need emergency location-based medical guidance");
+                    } else {
+                      alert("Please enable location access for location-based advice");
+                    }
+                  }}
+                  variant="outline"
+                  className="rounded-full px-4 py-2 text-sm hover:bg-purple-50 hover:border-purple-300 transition-all"
+                >
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Location Analysis
+                </Button>
+
+                <Button
+                  onClick={() => setInput("I need enhanced treatment guidance with home remedies")}
+                  variant="outline"
+                  className="rounded-full px-4 py-2 text-sm hover:bg-green-50 hover:border-green-300 transition-all"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  Home Remedies
+                </Button>
               </div>
             </div>
           ) : (
@@ -657,7 +791,7 @@ For non-emergency situations, please try again in a moment or consult with a hea
                       />
                     )}
 
-                    {/* Message Footer */}
+                    {/* Enhanced Message Footer with New Actions */}
                     <div className="flex items-center justify-between mt-4">
                       <div
                         className={`text-xs ${
@@ -672,13 +806,49 @@ For non-emergency situations, please try again in a moment or consult with a hea
                         })}
                       </div>
 
-                      {/* Voice Button for bot messages */}
+                      {/* Enhanced Voice and Action Buttons for bot messages */}
                       {msg.sender === "bot" && (
                         <div className="flex items-center gap-2">
                           <SpeakButton
                             text={msg.text}
                             className="text-xs text-slate-500 hover:text-indigo-600 transition-colors"
                           />
+                          
+                          {/* Enhance Advice Button */}
+                          {userLocation && !msg.text.includes("Enhanced Treatment Plan") && (
+                            <Button
+                              onClick={() => enhanceAdvice(msg.text)}
+                              disabled={isEnhancingAdvice}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs px-2 py-1 h-6"
+                            >
+                              {isEnhancingAdvice ? (
+                                <div className="w-3 h-3 border border-purple-500 border-t-transparent rounded-full animate-spin mr-1" />
+                              ) : (
+                                <span className="mr-1">🏠</span>
+                              )}
+                              {isEnhancingAdvice ? "Enhancing..." : "Home Remedies"}
+                            </Button>
+                          )}
+                          
+                          {/* Location Analysis Button */}
+                          {userLocation && !msg.text.includes("Location-Based Medical Assessment") && (
+                            <Button
+                              onClick={() => getLocationBasedAdvice(msg.text)}
+                              disabled={isGettingLocationAdvice}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs px-2 py-1 h-6"
+                            >
+                              {isGettingLocationAdvice ? (
+                                <div className="w-3 h-3 border border-blue-500 border-t-transparent rounded-full animate-spin mr-1" />
+                              ) : (
+                                <span className="mr-1">📍</span>
+                              )}
+                              {isGettingLocationAdvice ? "Analyzing..." : "Location Help"}
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
