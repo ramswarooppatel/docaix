@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Volume2, Pause, Play, Square } from 'lucide-react';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { useSettings } from '../hooks/useSettings';
+import { extractSpeakableContent } from '../utils/textUtils';
 
 interface SpeakButtonProps {
   text: string;
@@ -75,7 +76,7 @@ const SpeakButton: React.FC<SpeakButtonProps> = ({
         onClick={() => {
           if (!isSpeaking && !isPaused) {
             // Start speaking
-            speak(text);
+            speak(extractSpeakableContent(text));
           } else if (isSpeaking && !isPaused) {
             // Pause speaking
             pause();
