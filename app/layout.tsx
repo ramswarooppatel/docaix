@@ -15,12 +15,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning={true}>
-      <body>{children}</body>
+    <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.png" type="image/png" />
+                <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <meta name="theme-color" content="#3B82F6" />
+      </head>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
