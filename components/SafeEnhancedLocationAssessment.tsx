@@ -14,65 +14,57 @@ export const SafeEnhancedLocationAssessment: React.FC<SafeEnhancedLocationAssess
   if (!locationAdvice) {
     console.warn("SafeEnhancedLocationAssessment: No location advice provided");
     return (
-      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-        <p className="text-purple-800">Location assessment is being prepared...</p>
+      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p className="text-yellow-800">Location-based advice is being prepared...</p>
       </div>
     );
   }
 
   // Ensure required structure exists and handle different API response formats
-  let safeAdvice;
-  
-  // Check if locationAdvice is the direct API response or wrapped
-  if (locationAdvice.analysis) {
-    // Direct API response format
-    safeAdvice = locationAdvice;
-  } else if (locationAdvice.location_advice?.analysis) {
-    // Wrapped format
-    safeAdvice = locationAdvice.location_advice;
-  } else {
-    // Try to construct from available data
-    console.warn("Location advice structure not recognized, attempting to construct:", locationAdvice);
-    
-    // Create a safe structure from available data
-    safeAdvice = {
-      request_info: {
-        latitude: locationAdvice.request_info?.latitude || 0,
-        longitude: locationAdvice.request_info?.longitude || 0,
-        condition_description: locationAdvice.request_info?.condition_description || "Medical assessment",
+  const safeLocationAdvice = {
+    request_info: locationAdvice.request_info || {
+      latitude: 0,
+      longitude: 0,
+      condition_description: "General medical condition"
+    },
+    analysis: {
+      severity_assessment: {
+        severity_level: locationAdvice.analysis?.severity_assessment?.severity_level || "Medium",
+        urgency: locationAdvice.analysis?.severity_assessment?.urgency || "Moderate",
+        recommended_action: locationAdvice.analysis?.severity_assessment?.recommended_action || "Monitor condition",
+        estimated_response_time: locationAdvice.analysis?.severity_assessment?.estimated_response_time || "Unknown"
       },
-      analysis: {
-        severity_assessment: {
-          severity_level: locationAdvice.analysis?.severity_assessment?.severity_level || "Medium",
-          urgency: locationAdvice.analysis?.severity_assessment?.urgency || "Moderate",
-          recommended_action: locationAdvice.analysis?.severity_assessment?.recommended_action || "Seek medical attention if symptoms persist",
-        },
-        location_context: {
-          area_type: locationAdvice.analysis?.location_context?.area_type || "Urban",
-          medical_accessibility: locationAdvice.analysis?.location_context?.medical_accessibility || "Good",
-          nearest_emergency_services: locationAdvice.analysis?.location_context?.nearest_emergency_services || "Emergency services available",
-        },
-        immediate_actions: locationAdvice.analysis?.immediate_actions || [
-          "Monitor your condition carefully",
-          "Keep emergency contacts readily available",
-          "Note any changes in symptoms"
-        ],
+      location_context: {
+        area_type: locationAdvice.analysis?.location_context?.area_type || "Unknown area",
+        medical_accessibility: locationAdvice.analysis?.location_context?.medical_accessibility || "Moderate accessibility",
+        nearest_emergency_services: locationAdvice.analysis?.location_context?.nearest_emergency_services || "Emergency services available",
+        traffic_conditions: locationAdvice.analysis?.location_context?.traffic_conditions || "Normal",
+        weather_impact: locationAdvice.analysis?.location_context?.weather_impact || "No significant impact",
+        population_density: locationAdvice.analysis?.location_context?.population_density || "Moderate"
       },
-      emergency_note: locationAdvice.emergency_note || "For emergencies, contact local emergency services immediately.",
-      local_resources: {
-        nearby_hospitals: locationAdvice.local_resources?.nearby_hospitals || [
-          {
-            name: "Emergency Services",
-            distance: "Available nationwide",
-            specialties: ["Emergency Care"],
-            contact: "108"
-          }
-        ],
-        emergency_contacts: locationAdvice.local_resources?.emergency_contacts || ["108", "112"],
-        local_services: locationAdvice.local_resources?.local_services || []
+      risk_factors: locationAdvice.analysis?.risk_factors || {
+        distance_to_hospital: "Moderate distance",
+        isolation_level: "Low isolation",
+        communication_availability: "Good"
+      },
+      immediate_actions: locationAdvice.analysis?.immediate_actions || [
+        "Stay calm and assess the situation",
+        "Call for help if needed",
+        "Follow basic first aid principles"
+      ],
+      evacuation_plan: locationAdvice.analysis?.evacuation_plan || {
+        transport_options: ["Call emergency services"],
+        route_recommendations: ["Use main roads"],
+        estimated_time: "Unknown"
       }
-    };
-  }
+    },
+    emergency_note: locationAdvice.emergency_note || "For serious emergencies, call local emergency services immediately.",
+    local_resources: locationAdvice.local_resources || {
+      nearby_hospitals: [],
+      emergency_contacts: ["108 - Emergency Services"],
+      local_services: []
+    }
+  };
 
-  return <EnhancedLocationAssessment locationAdvice={safeAdvice} />;
+  return <EnhancedLocationAssessment locationAdvice={safeLocationAdvice} />;
 };
