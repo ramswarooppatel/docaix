@@ -767,6 +767,18 @@ For non-emergency situations, please try again in a moment or consult with a hea
               </Button>
             </Link>
 
+            {/* Vitals Button */}
+            <Link href="/vitals">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-red-100 transition-colors"
+                title="Vital Signs Monitor"
+              >
+                <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+              </Button>
+            </Link>
+
             <Link href="/settings">
               <Button
                 variant="ghost"

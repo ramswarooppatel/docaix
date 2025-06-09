@@ -133,6 +133,18 @@ const Home = () => {
                 First Aid Box Guide
               </Button>
               </Link>
+
+              {/* Add Vitals Quick Action */}
+              <Link href="/vitals">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200"
+                >
+                  <Heart className="w-5 h-5 mr-3" />
+                  Vital Signs Monitor
+                </Button>
+              </Link>
             </div>
           </div>
 
