@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Volume2, Pause, Play, Square } from 'lucide-react';
+import { Volume2, Pause, Play, Square, VolumeX } from 'lucide-react';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { useSettings } from '../hooks/useSettings';
 import { extractSpeakableContent } from '../utils/textUtils';
 
-interface SpeakButtonProps {
+export interface SpeakButtonProps {
   text: string;
+  structuredData?: any;
   className?: string;
   size?: 'sm' | 'default' | 'lg';
 }
@@ -69,22 +70,23 @@ const SpeakButton: React.FC<SpeakButtonProps> = ({
     }
   };
 
+  const handleSpeak = () => {
+    if (!text) return;
+    
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      stop();
+      return;
+    }
+    
+    speak(text);
+  };
+
   return (
     <div className="flex items-center gap-1">
       {/* Main Button - Changes based on state */}
       <Button
-        onClick={() => {
-          if (!isSpeaking && !isPaused) {
-            // Start speaking
-            speak(extractSpeakableContent(text));
-          } else if (isSpeaking && !isPaused) {
-            // Pause speaking
-            pause();
-          } else if (isPaused) {
-            // Resume speaking
-            resume();
-          }
-        }}
+        onClick={handleSpeak}
         variant="ghost"
         size={size}
         className={`${getButtonSize()} p-0 relative transition-all duration-200 ${
@@ -106,6 +108,7 @@ const SpeakButton: React.FC<SpeakButtonProps> = ({
           {!isSpeaking && !isPaused && <Volume2 className={getIconSize()} />}
           {isSpeaking && !isPaused && <Pause className={getIconSize()} />}
           {isPaused && <Play className={getIconSize()} />}
+          {isSpeaking && <VolumeX className={getIconSize()} />}
           
           {/* Visual indicator when speaking */}
           {showWaves && (

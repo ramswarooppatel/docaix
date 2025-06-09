@@ -403,10 +403,10 @@ For non-emergency situations, please try again in a moment or consult with a hea
       const botMessage: ChatMessage = {
         id: ++messageIdRef.current,
         sender: "bot",
-        text: response.analysis || "Analysis completed",
+        text: data.analysis || result || "Analysis completed",
         timestamp: new Date(),
         structuredData: structuredData,
-        sessionId: response.session_id || "image_analysis",
+        sessionId: data.session_id || "image_analysis",
       };
 
       setMessages((prev) => [...prev, botMessage]);
@@ -910,10 +910,10 @@ For non-emergency situations, please try again in a moment or consult with a hea
                     }`}
                   >
                     {/* Image Display */}
-                    {msg.image && (
+                    {msg.imageUrl && (
                       <div className="mb-3">
                         <img
-                          src={msg.image}
+                          src={msg.imageUrl}
                           alt="Uploaded injury photo"
                           className="max-w-full h-auto rounded-2xl border border-slate-200"
                           style={{ maxHeight: "300px" }}
@@ -1195,6 +1195,7 @@ For non-emergency situations, please try again in a moment or consult with a hea
 
           {/* Hidden File Input */}
           <input
+          title="Upload Injury Photo"
             ref={fileInputRef}
             type="file"
             accept="image/*"
