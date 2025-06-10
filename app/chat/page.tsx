@@ -151,6 +151,7 @@ const ChatPage = () => {
   const [enhancedAdvice, setEnhancedAdvice] = useState<any>(null);
   const [locationAdvice, setLocationAdvice] = useState<any>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [permissionWarnings, setPermissionWarnings] = useState<string[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -214,6 +215,34 @@ const ChatPage = () => {
     };
 
     checkMicPermission();
+  }, []);
+
+  // Check permissions on page load
+  useEffect(() => {
+    const checkCriticalPermissions = async () => {
+      const warnings: string[] = [];
+
+      // Check location permission
+      try {
+        if ('permissions' in navigator) {
+          const locationResult = await navigator.permissions.query({ name: 'geolocation' });
+          if (locationResult.state !== 'granted') {
+            warnings.push('Location access is needed for emergency services');
+          }
+
+          const micResult = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          if (micResult.state !== 'granted') {
+            warnings.push('Microphone access is needed for voice commands');
+          }
+        }
+      } catch (error) {
+        console.log('Permission check not supported');
+      }
+
+      setPermissionWarnings(warnings);
+    };
+
+    checkCriticalPermissions();
   }, []);
 
   const handleVoiceCommand = async (command: string) => {
@@ -690,6 +719,29 @@ For non-emergency situations, please try again in a moment or consult with a hea
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+      {/* Permission Warning Banner */}
+      {permissionWarnings.length > 0 && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-600" />
+              <span className="text-sm text-yellow-800">
+                {permissionWarnings[0]} - 
+                <Link href="/settings" className="underline ml-1">Grant in Settings</Link>
+              </span>
+            </div>
+            <Button
+              onClick={() => setPermissionWarnings([])}
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-yellow-600 hover:text-yellow-800"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Responsive Header */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-lg border-b border-slate-200/60 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 z-20 shadow-sm">
         <div className="w-full max-w-6xl mx-auto">

@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { SignalIndicators } from "@/components/signal-indicators";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { PermissionManager } from "@/components/PermissionManager";
 import {
   MessageCircle,
   Settings,
@@ -23,15 +24,144 @@ import {
   Package,
   Calculator,
   AlertTriangle,
+  Download,
+  Smartphone,
+  Monitor,
+  CheckCircle,
 } from "lucide-react";
 import Link from "next/link";
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 const Home = () => {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [showPermissionSetup, setShowPermissionSetup] = useState(false);
+
+  useEffect(() => {
+    // Check if app is already installed
+    const checkInstalled = () => {
+      const isStandaloneMode =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as any).standalone ||
+        document.referrer.includes("android-app://");
+      setIsInstalled(isStandaloneMode);
+    };
+
+    // Check if iOS
+    const checkIOS = () => {
+      const isIOSDevice =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      setIsIOS(isIOSDevice);
+    };
+
+    // Check if permissions have been set up (only show after PWA install prompt)
+    const checkPermissionSetup = () => {
+      const hasRequestedPermissions = localStorage.getItem('permissions-requested');
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Only show permission setup if PWA install was dismissed or completed
+      const pwaInstallDismissed = localStorage.getItem('pwa-install-dismissed');
+      
+      if (!hasRequestedPermissions && isMobile && (pwaInstallDismissed || isInstalled)) {
+        setTimeout(() => setShowPermissionSetup(true), 2000); // Delay to avoid overlap
+      }
+    };
+
+    checkInstalled();
+    checkIOS();
+    checkPermissionSetup();
+
+    // Listen for beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    // Listen for app installed event
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+      // Show permission setup after successful install
+      setTimeout(() => setShowPermissionSetup(true), 1000);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, [isInstalled]);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === "accepted") {
+      console.log("User accepted the install prompt");
+    }
+
+    setDeferredPrompt(null);
+  };
+
   return (
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* PWA Components */}
+      {/* PWA Components - Install prompt will show instantly on mobile */}
       <PWAInstallPrompt />
       <OfflineIndicator />
+
+      {/* Permission Setup Modal - Only shows after PWA interaction */}
+      {showPermissionSetup && (
+        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-800 mb-2">
+                🚨 Set Up Emergency Permissions
+              </h2>
+              <p className="text-sm text-slate-600">
+                Grant essential permissions for emergency medical assistance
+              </p>
+            </div>
+
+            <PermissionManager 
+              onPermissionsComplete={() => setShowPermissionSetup(false)}
+              showOnlyMissing={true}
+            />
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                onClick={() => setShowPermissionSetup(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Skip for Now
+              </Button>
+              <Link href="/settings" className="flex-1">
+                <Button className="w-full bg-red-600 hover:bg-red-700">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Go to Settings
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
@@ -41,12 +171,8 @@ const Home = () => {
               <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg sm:text-2xl text-slate-800">
-                DocAI
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-600">
-                AI First-Aid Assistant
-              </p>
+              <h1 className="font-bold text-lg sm:text-2xl text-slate-800">DocAI</h1>
+              <p className="text-xs sm:text-sm text-slate-600">AI First-Aid Assistant</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -233,9 +359,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
                 <Phone className="w-6 h-6 text-red-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                Emergency Response
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Emergency Response</h3>
               <p className="text-slate-600 leading-relaxed">
                 Instant access to emergency services (108) and automatic alerts
                 to your emergency contacts with your location.
@@ -247,9 +371,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
                 <Building2 className="w-6 h-6 text-red-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                Nearby Hospitals
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Nearby Hospitals</h3>
               <p className="text-slate-600 leading-relaxed">
                 Find hospitals, clinics, and emergency centers near your
                 location with directions and contact information.
@@ -261,9 +383,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
                 <Activity className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                Health Profile Analysis
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Health Profile Analysis</h3>
               <p className="text-slate-600 leading-relaxed">
                 Get personalized health recommendations based on your medical
                 profile, lifestyle, and conditions.
@@ -275,9 +395,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
                 <Heart className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                First Aid Guidance
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">First Aid Guidance</h3>
               <p className="text-slate-600 leading-relaxed">
                 Step-by-step first aid instructions for burns, cuts, choking,
                 CPR, and other medical emergencies.
@@ -289,9 +407,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
                 <Clock className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                24/7 Availability
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">24/7 Availability</h3>
               <p className="text-slate-600 leading-relaxed">
                 AI-powered assistance available round the clock, providing
                 immediate help when you need it most.
@@ -303,9 +419,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
                 <MapPin className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                Location Sharing
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Location Sharing</h3>
               <p className="text-slate-600 leading-relaxed">
                 Automatic location sharing with emergency contacts and services
                 for faster response times.
@@ -317,9 +431,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
                 <Stethoscope className="w-6 h-6 text-indigo-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                Medical Knowledge
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Medical Knowledge</h3>
               <p className="text-slate-600 leading-relaxed">
                 Comprehensive medical database covering symptoms, treatments,
                 and emergency procedures.
@@ -331,9 +443,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
                 <Users className="w-6 h-6 text-orange-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                Emergency Contacts
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Emergency Contacts</h3>
               <p className="text-slate-600 leading-relaxed">
                 Manage and alert your emergency contacts instantly during
                 critical situations.
@@ -345,9 +455,7 @@ const Home = () => {
               <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
                 <Package className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">
-                First Aid Box Setup
-              </h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">First Aid Box Setup</h3>
               <p className="text-slate-600 leading-relaxed">
                 Complete guide to building and maintaining first aid kits for
                 home, car, office, and travel.
@@ -356,7 +464,7 @@ const Home = () => {
           </div>
 
           {/* Emergency Notice */}
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-6 sm:p-8 text-center">
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-6 sm:p-8 text-center mb-12 sm:mb-16">
             <Shield className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <h3 className="text-xl sm:text-2xl font-bold text-red-800 mb-3">
               🚨 Important Emergency Notice
@@ -367,6 +475,111 @@ const Home = () => {
               life-threatening emergencies, always call 108 immediately.
             </p>
           </div>
+
+          {/* PWA Install Section */}
+          {!isInstalled && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 sm:p-8 text-center mb-12 sm:mb-16">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Smartphone className="w-8 h-8 text-white" />
+              </div>
+
+              <h3 className="text-xl sm:text-2xl font-bold text-blue-800 mb-3">
+                📱 Install DocAI App
+              </h3>
+
+              <p className="text-blue-700 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto mb-6">
+                Get instant access to emergency medical assistance, even when you're offline!
+                Install DocAI on your device for faster access and better performance.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                {/* Android/Desktop Install Button */}
+                {deferredPrompt && (
+                  <Button
+                    onClick={handleInstallClick}
+                    size="lg"
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <Download className="w-5 h-5 mr-3" />
+                    Install App Now
+                  </Button>
+                )}
+
+                {/* iOS Instructions */}
+                {isIOS && !deferredPrompt && (
+                  <div className="bg-white/80 backdrop-blur-sm border border-blue-200 rounded-xl p-4 max-w-md">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Monitor className="w-6 h-6 text-blue-600" />
+                      <h4 className="font-semibold text-blue-800">Add to Home Screen</h4>
+                    </div>
+                    <div className="text-sm text-blue-700 text-left">
+                      <p className="mb-2">To install on iOS:</p>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>
+                          Tap the Share button{" "}
+                          <span className="inline-block">📤</span> in Safari
+                        </li>
+                        <li>Scroll down and tap "Add to Home Screen"</li>
+                        <li>Tap "Add" to confirm installation</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback for browsers without install prompt */}
+                {!deferredPrompt && !isIOS && (
+                  <div className="bg-white/80 backdrop-blur-sm border border-blue-200 rounded-xl p-4 max-w-md">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Monitor className="w-6 h-6 text-blue-600" />
+                      <h4 className="font-semibold text-blue-800">Browser Support</h4>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      For the best experience, use Chrome, Edge, or Firefox to install DocAI as an app.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Benefits List */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 max-w-3xl mx-auto">
+                <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4">
+                  <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <h5 className="font-semibold text-blue-800 mb-1">Offline Access</h5>
+                  <p className="text-xs text-blue-700">Works without internet for emergencies</p>
+                </div>
+
+                <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4">
+                  <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <h5 className="font-semibold text-blue-800 mb-1">Faster Loading</h5>
+                  <p className="text-xs text-blue-700">Instant startup from home screen</p>
+                </div>
+
+                <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4">
+                  <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <h5 className="font-semibold text-blue-800 mb-1">Push Notifications</h5>
+                  <p className="text-xs text-blue-700">Emergency alerts and reminders</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* App Already Installed Message */}
+          {isInstalled && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6 sm:p-8 text-center mb-12 sm:mb-16">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+
+              <h3 className="text-xl sm:text-2xl font-bold text-green-800 mb-3">
+                ✅ DocAI App Installed!
+              </h3>
+
+              <p className="text-green-700 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+                Great! You're all set with offline access and faster performance.
+                DocAI is now available from your home screen for instant emergency assistance.
+              </p>
+            </div>
+          )}
 
           {/* Bottom CTA */}
           <div className="text-center mt-12 sm:mt-16">
