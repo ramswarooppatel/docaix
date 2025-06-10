@@ -412,10 +412,11 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                     );
                   case "enhanced":
                     console.log("Enhanced case - structuredData:", structuredData);
-                    console.log("Enhanced case - enhanced_advice:", structuredData?.enhanced_advice);
+                    // Add proper type checking before accessing properties
+                    console.log("Enhanced case - enhanced_advice:", structuredData && typeof structuredData === 'object' && 'enhanced_advice' in structuredData ? structuredData.enhanced_advice : undefined);
                     
                     // Check if this is structured data with enhanced advice
-                    if (structuredData && structuredData.enhanced_advice) {
+                    if (structuredData && typeof structuredData === 'object' && 'enhanced_advice' in structuredData) {
                       return (
                         <div key={index} className="w-full">
                           <SafeEnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
@@ -834,16 +835,18 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                     );
                   case "enhanced":
                     console.log("Enhanced case - structuredData:", structuredData);
-                    console.log("Enhanced case - enhanced_advice:", structuredData?.enhanced_advice);
+                    // Add proper type checking before accessing properties
+console.log("Enhanced case - enhanced_advice:", (structuredData as EnhancedMessageDisplayProps['structuredData'])?.enhanced_advice);
                     
                     // Check if this is structured data with enhanced advice
-                    if (structuredData && structuredData.enhanced_advice) {
-                      return (
-                        <div key={index} className="w-full">
-                          <SafeEnhancedHomeRemedies enhancedAdvice={structuredData.enhanced_advice} />
-                        </div>
-                      );
-                    }
+                    if ((structuredData as EnhancedMessageDisplayProps['structuredData'])?.enhanced_advice) {
+  return (
+    <div key={index} className="w-full">
+      <SafeEnhancedHomeRemedies enhancedAdvice={(structuredData as EnhancedMessageDisplayProps['structuredData'])?.enhanced_advice || {}} />
+    </div>
+  );
+}
+
 
                     // Fallback to original rendering
                     return (
@@ -872,13 +875,16 @@ export const EnhancedMessageDisplay: React.FC<EnhancedMessageDisplayProps> = ({
                     );
                   case "location":
                     // Check if this is structured data with location advice
-                    if (structuredData && structuredData.location_advice) {
-                      return (
-                        <div key={index} className="w-full">
-                          <SafeEnhancedLocationAssessment locationAdvice={structuredData.location_advice} />
-                        </div>
-                      );
-                    }
+                    if ((structuredData as EnhancedMessageDisplayProps["structuredData"])?.location_advice) {
+  return (
+    <div key={index} className="w-full">
+      <SafeEnhancedLocationAssessment
+        locationAdvice={(structuredData as EnhancedMessageDisplayProps["structuredData"])?.location_advice || {}}
+      />
+    </div>
+  );
+}
+
 
                     // Fallback to original rendering
                     return (
