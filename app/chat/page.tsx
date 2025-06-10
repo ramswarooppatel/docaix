@@ -11,6 +11,8 @@ import {
   Stethoscope,
   CheckCircle,
   RotateCcw,
+  AlertTriangle,
+  AlertCircle,
   Bot,
   User,
   MapPin,
