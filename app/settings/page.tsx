@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SignalIndicators } from "@/components/signal-indicators";
+import { PermissionManager } from "@/components/PermissionManager";
 import {
   ArrowLeft,
   Plus,
@@ -37,6 +38,8 @@ import {
   XCircle,
   AlertTriangle,
   Building2,
+  Camera,
+  HardDrive,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -94,6 +97,7 @@ const SettingsPage = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<
+    | "permissions"
     | "contacts"
     | "privacy"
     | "voice"
@@ -532,24 +536,30 @@ const SettingsPage = () => {
   }
 
   const tabs = [
+    { id: "permissions", label: "Permissions", icon: Shield }, // New tab
     { id: "contacts", label: "Contacts", icon: User },
     { id: "privacy", label: "Privacy", icon: Shield },
     { id: "voice", label: "Voice", icon: Mic },
     { id: "display", label: "Display", icon: Eye },
     { id: "emergency", label: "Emergency", icon: AlertTriangle },
     { id: "data", label: "Data", icon: Globe },
-    { id: "hospitals", label: "Hospitals", icon: MapPin },
+    { id: "accessibility", label: "Accessibility", icon: Eye },
+    { id: "hospitals", label: "Hospitals", icon: Building2 },
   ];
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
+      <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-20 shadow-sm">
         <div className="w-full max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Link href="/chat">
-              <Button variant="ghost" size="sm" className="p-2">
-                <ArrowLeft className="w-4 h-4" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link href="/">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5 h-8 w-8 hover:bg-slate-100 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4 text-slate-600" />
               </Button>
             </Link>
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -579,34 +589,80 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-slate-200 px-3 sm:px-6">
+      {/* Tabs */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200/60 px-3 sm:px-6 py-2 overflow-x-auto">
         <div className="w-full max-w-6xl mx-auto">
-          <div className="flex space-x-0 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-1 min-w-max">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
-                <button
+                <Button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-3 py-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1 ${
+                  variant={activeTab === tab.id ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-9 px-3 text-xs font-medium flex-shrink-0 ${
                     activeTab === tab.id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-slate-600 hover:text-slate-800"
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-600 hover:text-slate-800 hover:bg-slate-100"
                   }`}
                 >
-                  <Icon className="w-3 h-3" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
+                  <Icon className="w-3.5 h-3.5 mr-1.5" />
+                  {tab.label}
+                </Button>
               );
             })}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Content */}
       <div className="flex-1 px-3 sm:px-6 py-4 sm:py-6 overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto space-y-6">
+          {/* Permissions Tab */}
+          {activeTab === "permissions" && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Shield className="w-5 h-5 text-red-600" />
+                <h2 className="text-lg sm:text-xl font-bold text-slate-800">
+                  App Permissions
+                </h2>
+              </div>
+
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h3 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Critical for Emergency Response
+                </h3>
+                <p className="text-sm text-red-700">
+                  These permissions are essential for DocAI to provide life-saving
+                  emergency assistance. Without them, some features may not work
+                  properly during medical emergencies.
+                </p>
+              </div>
+
+              <PermissionManager />
+
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-semibold text-blue-800 mb-2">
+                  🛡️ Privacy Protection
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>
+                    • Your location is only used for emergency services and
+                    hospital finding
+                  </li>
+                  <li>• Voice recordings are processed locally and not stored</li>
+                  <li>• Photos are analyzed on-device for medical conditions</li>
+                  <li>• All personal data remains on your device</li>
+                  <li>
+                    • No data is shared with third parties without your consent
+                  </li>
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Emergency Contacts Tab */}
           {activeTab === "contacts" && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
