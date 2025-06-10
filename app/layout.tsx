@@ -195,12 +195,41 @@ export default function RootLayout({
                 navigator.serviceWorker.register('/sw.js')
                   .then(function(registration) {
                     console.log('SW registered: ', registration);
+                    
+                    // Force update service worker
+                    registration.addEventListener('updatefound', () => {
+                      const newWorker = registration.installing;
+                      if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('New service worker available');
+                            // Optionally show update notification
+                          }
+                        });
+                      }
+                    });
                   })
                   .catch(function(registrationError) {
                     console.log('SW registration failed: ', registrationError);
                   });
               });
             }
+
+            // Add offline detection
+            function updateOnlineStatus() {
+              const isOnline = navigator.onLine;
+              document.body.setAttribute('data-online', isOnline.toString());
+              
+              if (!isOnline) {
+                console.log('App is offline - medical guide available');
+              } else {
+                console.log('App is online');
+              }
+            }
+
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+            updateOnlineStatus();
           `,
           }}
         />

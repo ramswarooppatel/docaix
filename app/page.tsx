@@ -28,6 +28,8 @@ import {
   Smartphone,
   Monitor,
   CheckCircle,
+  WifiOff,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -45,6 +47,7 @@ const Home = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showPermissionSetup, setShowPermissionSetup] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
     // Check if app is already installed
@@ -64,43 +67,55 @@ const Home = () => {
       setIsIOS(isIOSDevice);
     };
 
-    // Check if permissions have been set up (only show after PWA install prompt)
+    // Check online status with network test
+    const checkOnlineStatus = async () => {
+      if (!navigator.onLine) {
+        setIsOnline(false);
+        return;
+      }
+
+      try {
+        // Test actual connectivity with a lightweight request
+        const response = await fetch('/manifest.json', { 
+          method: 'HEAD',
+          cache: 'no-cache',
+          signal: AbortSignal.timeout(3000)
+        });
+        setIsOnline(response.ok);
+      } catch {
+        setIsOnline(false);
+      }
+    };
+
+    // Check permission setup
     const checkPermissionSetup = () => {
       const hasRequestedPermissions = localStorage.getItem('permissions-requested');
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
-      // Only show permission setup if PWA install was dismissed or completed
-      const pwaInstallDismissed = localStorage.getItem('pwa-install-dismissed');
-      
-      if (!hasRequestedPermissions && isMobile && (pwaInstallDismissed || isInstalled)) {
-        setTimeout(() => setShowPermissionSetup(true), 2000); // Delay to avoid overlap
+      if (!hasRequestedPermissions && isMobile && (localStorage.getItem('pwa-install-dismissed') || isInstalled)) {
+        setTimeout(() => setShowPermissionSetup(true), 2000);
       }
     };
 
     checkInstalled();
     checkIOS();
+    checkOnlineStatus();
     checkPermissionSetup();
 
-    // Listen for beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
+    // Listen for online/offline events
+    const handleOnline = () => checkOnlineStatus();
+    const handleOffline = () => setIsOnline(false);
 
-    // Listen for app installed event
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-      // Show permission setup after successful install
-      setTimeout(() => setShowPermissionSetup(true), 1000);
-    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", handleAppInstalled);
+    // Check connectivity periodically
+    const connectivityInterval = setInterval(checkOnlineStatus, 30000);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(connectivityInterval);
     };
   }, [isInstalled]);
 
@@ -119,7 +134,7 @@ const Home = () => {
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* PWA Components - Install prompt will show instantly on mobile */}
+      {/* PWA Components */}
       <PWAInstallPrompt />
       <OfflineIndicator />
 
@@ -163,6 +178,18 @@ const Home = () => {
         </div>
       )}
 
+      {/* Offline Status Banner */}
+      {!isOnline && (
+        <div className="bg-orange-600 text-white px-3 sm:px-6 py-2">
+          <div className="w-full max-w-6xl mx-auto flex items-center justify-center gap-2">
+            <WifiOff className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              You're offline - Emergency medical guide still available
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
         <div className="w-full max-w-6xl mx-auto flex justify-between items-center">
@@ -171,8 +198,12 @@ const Home = () => {
               <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg sm:text-2xl text-slate-800">DocAI</h1>
-              <p className="text-xs sm:text-sm text-slate-600">AI First-Aid Assistant</p>
+              <h1 className="font-bold text-lg sm:text-2xl text-slate-800">
+                DocAI
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-600">
+                AI First-Aid Assistant
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -187,51 +218,54 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="flex-1 px-3 sm:px-6 py-6 sm:py-12">
-        <div className="w-full max-w-6xl mx-auto">
-          {/* Main Hero */}
-          <div className="text-center mb-12 sm:mb-16">
-            <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center shadow-xl">
-              <Sparkles className="text-blue-600 w-10 h-10 sm:w-16 sm:h-16" />
+      {/* Main Content */}
+      <div className="flex-1 px-3 sm:px-6 py-4 sm:py-6">
+        <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
+          {/* Hero Section */}
+          <div className="text-center space-y-4 py-6 sm:py-12">
+            <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Heart className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
             </div>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-slate-800 mb-4 sm:mb-6">
-              Your AI-Powered
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 block">
-                First Aid Assistant
-              </span>
-            </h1>
-            <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto mb-8 sm:mb-12 leading-relaxed">
-              Get instant first aid guidance and emergency assistance support
-              24/7. DocAI is here to help you stay safe and handle medical
-              emergencies with confidence.
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+              Emergency Medical Assistant
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed">
+              Get instant AI-powered first aid guidance, find nearby hospitals, and access emergency services. 
+              Your pocket-sized medical companion for any situation.
             </p>
+            {!isOnline && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md mx-auto">
+                <p className="text-orange-800 text-sm">
+                  <WifiOff className="w-4 h-4 inline mr-2" />
+                  Working offline with comprehensive medical guide
+                </p>
+              </div>
+            )}
+          </div>
 
-            {/* 3x3 Grid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 max-w-5xl mx-auto">
-              {/* Row 1 */}
-              {/* R1,C1 - Settings */}
-              <Link href="/settings">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 h-auto flex flex-col gap-3"
-                >
-                  <Settings className="w-8 h-8" />
-                  <div className="text-center">
-                    <div className="font-bold">Emergency Settings</div>
-                    <div className="text-sm opacity-75">
-                      Setup contacts & preferences
-                    </div>
-                  </div>
-                </Button>
-              </Link>
-
-              {/* R1,C2 - Chat */}
+          {/* Quick Action Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            
+             <Link href="/emergency-sos">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-yellow-300 hover:border-yellow-500 hover:bg-yellow-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Phone className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Emergency SOS</div>
+                  <div className="text-sm opacity-75">Quick emergency calls</div>
+                </div>
+              </Button>
+            </Link>
+            {/* Emergency Chat / Offline Guide - Conditional */}
+            {isOnline ? (
               <Link href="/chat">
                 <Button
+                  variant="default"
                   size="lg"
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-6 py-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 h-auto flex flex-col gap-3"
+                  className="w-full text-lg px-6 py-8 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-auto flex flex-col gap-3"
                 >
                   <MessageCircle className="w-8 h-8" />
                   <div className="text-center">
@@ -242,199 +276,149 @@ const Home = () => {
                   </div>
                 </Button>
               </Link>
-
-              {/* R1,C3 - First Aid Box */}
-              <Link href="/firstaidbox">
+            ) : (
+              <Link href="/offline-medical-guide">
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                  className="w-full text-lg px-6 py-8 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-auto flex flex-col gap-3"
                 >
-                  <Package className="w-8 h-8" />
+                  <BookOpen className="w-8 h-8" />
                   <div className="text-center">
-                    <div className="font-bold">First Aid Box</div>
-                    <div className="text-sm opacity-75">Complete setup guide</div>
+                    <div className="font-bold">Offline Medical Guide</div>
+                    <div className="text-sm opacity-90">
+                      Complete first aid reference
+                    </div>
                   </div>
                 </Button>
               </Link>
+            )}
 
-              {/* Row 2 */}
-              {/* R2,C1 - Nearby Hospitals */}
-              <Link href="/hospitals">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200 h-auto flex flex-col gap-3"
-                >
-                  <Building2 className="w-8 h-8" />
-                  <div className="text-center">
-                    <div className="font-bold">Nearby Hospitals</div>
-                    <div className="text-sm opacity-75">Find emergency centers</div>
-                  </div>
-                </Button>
-              </Link>
+            {/* R1,C2 - Hospital Finder */}
+         
 
-              {/* R2,C2 - CPR Guide */}
-              <Link href="/cpr-guide">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-pink-300 hover:border-pink-500 hover:bg-pink-50 transition-all duration-200 h-auto flex flex-col gap-3"
-                >
-                  <Heart className="w-8 h-8" />
-                  <div className="text-center">
-                    <div className="font-bold">CPR Guide</div>
-                    <div className="text-sm opacity-75">Life support training</div>
-                  </div>
-                </Button>
-              </Link>
+            {/* R1,C3 - First Aid Box */}
+            <Link href="/firstaidbox">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Package className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">First Aid Box</div>
+                  <div className="text-sm opacity-75">Complete setup guide</div>
+                </div>
+              </Button>
+            </Link>
+   <Link href="/hospitals">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Building2 className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Find Hospitals</div>
+                  <div className="text-sm opacity-75">Locate nearest medical care</div>
+                </div>
+              </Button>
+            </Link>
+            {/* Row 2 */}
+            {/* R2,C1 - CPR Guide */}
+            <Link href="/cpr-guide">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Heart className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">CPR Guide</div>
+                  <div className="text-sm opacity-75">Life support training</div>
+                </div>
+              </Button>
+            </Link>
+<Link href="/healthprofile">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Activity className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Health Profile</div>
+                  <div className="text-sm opacity-75">Manage your health data</div>
+                </div>
+              </Button>
+            </Link>
+            {/* R2,C2 - Vitals */}
+            <Link href="/vitals">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Stethoscope className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Vital Signs</div>
+                  <div className="text-sm opacity-75">Monitor health metrics</div>
+                </div>
+              </Button>
+            </Link>
 
-              {/* R2,C3 - Vitals */}
-              <Link href="/vitals">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200 h-auto flex flex-col gap-3"
-                >
-                  <Stethoscope className="w-8 h-8" />
-                  <div className="text-center">
-                    <div className="font-bold">Vital Signs</div>
-                    <div className="text-sm opacity-75">Monitor health metrics</div>
-                  </div>
-                </Button>
-              </Link>
-
-              {/* Row 3 */}
-              {/* R3,C1 - Emergency SOS */}
-              <Link href="/emergency-sos">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-orange-300 hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 h-auto flex flex-col gap-3"
-                >
-                  <AlertTriangle className="w-8 h-8" />
-                  <div className="text-center">
-                    <div className="font-bold">Emergency SOS</div>
-                    <div className="text-sm opacity-75">Quick emergency alert</div>
-                  </div>
-                </Button>
-              </Link>
-
-              {/* R3,C2 - Health Profile */}
-              <Link href="/healthprofile">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200 h-auto flex flex-col gap-3"
-                >
-                  <Activity className="w-8 h-8" />
-                  <div className="text-center">
-                    <div className="font-bold">Health Profile</div>
-                    <div className="text-sm opacity-75">Personal health analysis</div>
-                  </div>
-                </Button>
-              </Link>
-
-              {/* R3,C3 - Calculators */}
-              <Link href="/calculators">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200 h-auto flex flex-col gap-3"
-                >
-                  <Calculator className="w-8 h-8" />
-                  <div className="text-center">
-                    <div className="font-bold">Health Calculators</div>
-                    <div className="text-sm opacity-75">BMI, BMR & more tools</div>
-                  </div>
-                </Button>
-              </Link>
-            </div>
+            {/* R2,C3 - Emergency SOS */}
+            
+            
+            <Link href="/calculators">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-pink-300 hover:border-pink-500 hover:bg-pink-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Calculator className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Medical Calculators</div>
+                  <div className="text-sm opacity-75">Essential health calculations</div>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/settings">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg px-6 py-8 rounded-xl border-2 border-gray-300 hover:border-gray-500 hover:bg-gray-50 transition-all duration-200 h-auto flex flex-col gap-3"
+              >
+                <Settings className="w-8 h-8" />
+                <div className="text-center">
+                  <div className="font-bold">Settings</div>
+                  <div className="text-sm opacity-75">Configure your preferences</div>
+                </div>
+              </Button>
+            </Link>
           </div>
 
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
-            {/* Emergency Response */}
+          {/* Features Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-12">
+            {/* AI-Powered Diagnosis */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
-                <Phone className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <Brain className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">Emergency Response</h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">AI Medical Analysis</h3>
               <p className="text-slate-600 leading-relaxed">
-                Instant access to emergency services (108) and automatic alerts
-                to your emergency contacts with your location.
+                Upload photos of injuries or describe symptoms for instant AI-powered medical guidance and first aid recommendations.
               </p>
             </div>
 
-            {/* Nearby Hospitals */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
-                <Building2 className="w-6 h-6 text-red-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">Nearby Hospitals</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Find hospitals, clinics, and emergency centers near your
-                location with directions and contact information.
-              </p>
-            </div>
-
-            {/* Health Profile Analysis */}
+            {/* Hospital Network */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
-                <Activity className="w-6 h-6 text-green-600" />
+                <MapPin className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">Health Profile Analysis</h3>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Hospital Network</h3>
               <p className="text-slate-600 leading-relaxed">
-                Get personalized health recommendations based on your medical
-                profile, lifestyle, and conditions.
-              </p>
-            </div>
-
-            {/* First Aid Guidance */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-                <Heart className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">First Aid Guidance</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Step-by-step first aid instructions for burns, cuts, choking,
-                CPR, and other medical emergencies.
-              </p>
-            </div>
-
-            {/* 24/7 Availability */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-                <Clock className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">24/7 Availability</h3>
-              <p className="text-slate-600 leading-relaxed">
-                AI-powered assistance available round the clock, providing
-                immediate help when you need it most.
-              </p>
-            </div>
-
-            {/* Location Services */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-                <MapPin className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">Location Sharing</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Automatic location sharing with emergency contacts and services
-                for faster response times.
-              </p>
-            </div>
-
-            {/* Medical Knowledge */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
-                <Stethoscope className="w-6 h-6 text-indigo-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">Medical Knowledge</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Comprehensive medical database covering symptoms, treatments,
-                and emergency procedures.
+                Find the nearest hospitals, emergency rooms, and medical facilities with real-time directions and contact information.
               </p>
             </div>
 
@@ -445,8 +429,7 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-bold text-slate-800 mb-3">Emergency Contacts</h3>
               <p className="text-slate-600 leading-relaxed">
-                Manage and alert your emergency contacts instantly during
-                critical situations.
+                Manage and alert your emergency contacts instantly during critical situations.
               </p>
             </div>
 
@@ -457,9 +440,69 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-bold text-slate-800 mb-3">First Aid Box Setup</h3>
               <p className="text-slate-600 leading-relaxed">
-                Complete guide to building and maintaining first aid kits for
-                home, car, office, and travel.
+                Complete guide to building and maintaining first aid kits for home, car, office, and travel.
               </p>
+            </div>
+
+            {/* Vital Signs Monitor */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
+                <Activity className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Vital Signs Tracking</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Monitor and track vital signs including heart rate, blood pressure, and temperature with trend analysis.
+              </p>
+            </div>
+
+            {/* Medical Calculators */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
+                <Calculator className="w-6 h-6 text-indigo-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Medical Calculators</h3>
+              <p className="text-slate-600 leading-relaxed">
+                BMI calculator, medication dosages, and other essential medical calculations for better health management.
+              </p>
+            </div>
+          </div>
+
+          {/* Emergency Preparedness Section */}
+          <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl p-6 sm:p-8 border border-red-200">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">Emergency Preparedness</h2>
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                Be ready for any medical emergency with our comprehensive preparation tools and resources.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
+                <Clock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <h4 className="font-semibold text-slate-800 mb-1">24/7 Ready</h4>
+                <p className="text-sm text-slate-600">Always available when you need help</p>
+              </div>
+
+              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
+                <Smartphone className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                <h4 className="font-semibold text-slate-800 mb-1">Offline Access</h4>
+                <p className="text-sm text-slate-600">Works without internet connection</p>
+              </div>
+
+              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
+                <MapPin className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                <h4 className="font-semibold text-slate-800 mb-1">Location Aware</h4>
+                <p className="text-sm text-slate-600">Finds help based on your location</p>
+              </div>
+
+              <div className="text-center p-4 bg-white rounded-xl shadow-sm">
+                <Heart className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                <h4 className="font-semibold text-slate-800 mb-1">Health Monitoring</h4>
+                <p className="text-sm text-slate-600">Tracks vital signs and health metrics</p>
+              </div>
             </div>
           </div>
 
