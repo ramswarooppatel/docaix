@@ -19,6 +19,8 @@ import {
   Activity,
   Building2,
   Package,
+  Calculator,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -73,76 +75,146 @@ const Home = () => {
               emergencies with confidence.
             </p>
 
-            {/* Primary Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-              {/* Health Profile Button */}
-              <Link href="/healthprofile">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200"
-              >
-                <Activity className="w-5 h-5 mr-3" />
-                Health Profile Analysis
-              </Button>
-              </Link>
-
-              {/* Add Hospitals Button */}
-              <Link href="/hospitals">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200"
-              >
-                <Building2 className="w-5 h-5 mr-3" />
-                Find Nearby Hospitals
-              </Button>
-              </Link>
-
-              {/* Start Emergency Chat Button (centered) */}
-              <Link href="/chat">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <MessageCircle className="w-5 h-5 mr-3" />
-                Start Emergency Chat
-                <ArrowRight className="w-5 h-5 ml-3" />
-              </Button>
-              </Link>
-
+            {/* 3x3 Grid Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 max-w-5xl mx-auto">
+              {/* Row 1 */}
+              {/* R1,C1 - Settings */}
               <Link href="/settings">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
-              >
-                <Settings className="w-5 h-5 mr-3" />
-                Setup Emergency Contacts
-              </Button>
-              </Link>
-              
-              {/* First Aid Box CTA */}
-              <Link href="/firstaidbox">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200"
-              >
-                <Package className="w-5 h-5 mr-3" />
-                First Aid Box Guide
-              </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-slate-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <Settings className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">Emergency Settings</div>
+                    <div className="text-sm opacity-75">
+                      Setup contacts & preferences
+                    </div>
+                  </div>
+                </Button>
               </Link>
 
-              {/* Add Vitals Quick Action */}
+              {/* R1,C2 - Chat */}
+              <Link href="/chat">
+                <Button
+                  size="lg"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-6 py-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <MessageCircle className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">Emergency Chat</div>
+                    <div className="text-sm opacity-90">
+                      Get instant AI assistance
+                    </div>
+                  </div>
+                </Button>
+              </Link>
+
+              {/* R1,C3 - First Aid Box */}
+              <Link href="/firstaidbox">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <Package className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">First Aid Box</div>
+                    <div className="text-sm opacity-75">Complete setup guide</div>
+                  </div>
+                </Button>
+              </Link>
+
+              {/* Row 2 */}
+              {/* R2,C1 - Nearby Hospitals */}
+              <Link href="/hospitals">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <Building2 className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">Nearby Hospitals</div>
+                    <div className="text-sm opacity-75">Find emergency centers</div>
+                  </div>
+                </Button>
+              </Link>
+
+              {/* R2,C2 - CPR Guide */}
+              <Link href="/cpr-guide">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-pink-300 hover:border-pink-500 hover:bg-pink-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <Heart className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">CPR Guide</div>
+                    <div className="text-sm opacity-75">Life support training</div>
+                  </div>
+                </Button>
+              </Link>
+
+              {/* R2,C3 - Vitals */}
               <Link href="/vitals">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200 h-auto flex flex-col gap-3"
                 >
-                  <Heart className="w-5 h-5 mr-3" />
-                  Vital Signs Monitor
+                  <Stethoscope className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">Vital Signs</div>
+                    <div className="text-sm opacity-75">Monitor health metrics</div>
+                  </div>
+                </Button>
+              </Link>
+
+              {/* Row 3 */}
+              {/* R3,C1 - Emergency SOS */}
+              <Link href="/emergency-sos">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-orange-300 hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <AlertTriangle className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">Emergency SOS</div>
+                    <div className="text-sm opacity-75">Quick emergency alert</div>
+                  </div>
+                </Button>
+              </Link>
+
+              {/* R3,C2 - Health Profile */}
+              <Link href="/healthprofile">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-green-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <Activity className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">Health Profile</div>
+                    <div className="text-sm opacity-75">Personal health analysis</div>
+                  </div>
+                </Button>
+              </Link>
+
+              {/* R3,C3 - Calculators */}
+              <Link href="/calculators">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-lg px-6 py-8 rounded-xl border-2 border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200 h-auto flex flex-col gap-3"
+                >
+                  <Calculator className="w-8 h-8" />
+                  <div className="text-center">
+                    <div className="font-bold">Health Calculators</div>
+                    <div className="text-sm opacity-75">BMI, BMR & more tools</div>
+                  </div>
                 </Button>
               </Link>
             </div>
@@ -164,7 +236,7 @@ const Home = () => {
               </p>
             </div>
 
-            {/* Nearby Hospitals - NEW */}
+            {/* Nearby Hospitals */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 hover:shadow-lg transition-shadow duration-200">
               <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
                 <Building2 className="w-6 h-6 text-red-600" />
@@ -303,7 +375,6 @@ const Home = () => {
                 </Button>
               </Link>
 
-              {/* Add Hospitals CTA */}
               <Link href="/hospitals">
                 <Button
                   variant="outline"
@@ -315,7 +386,6 @@ const Home = () => {
                 </Button>
               </Link>
 
-              {/* Health Profile CTA */}
               <Link href="/healthprofile">
                 <Button
                   variant="outline"
@@ -327,7 +397,6 @@ const Home = () => {
                 </Button>
               </Link>
 
-              {/* First Aid Box CTA */}
               <Link href="/firstaidbox">
                 <Button
                   variant="outline"
