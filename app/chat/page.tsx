@@ -29,6 +29,8 @@ import {
   Package,
   Camera,
   X,
+  MoreVertical,
+  Menu,
 } from "lucide-react";
 import Link from "next/link";
 import VoiceInput from "@/components/VoiceInput";
@@ -148,6 +150,7 @@ const ChatPage = () => {
   const [isGettingLocationAdvice, setIsGettingLocationAdvice] = useState(false);
   const [enhancedAdvice, setEnhancedAdvice] = useState<any>(null);
   const [locationAdvice, setLocationAdvice] = useState<any>(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -681,119 +684,303 @@ For non-emergency situations, please try again in a moment or consult with a hea
     }
   };
 
+  const handleMobileMenuToggle = () => {
+    setShowMobileMenu((prev) => !prev);
+  };
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-      {/* Header */}
-      <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
-        <div className="w-full max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-slate-100 transition-colors"
-              >
-                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 text-slate-600" />
-              </Button>
-            </Link>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-              <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="font-bold text-xs sm:text-sm lg:text-xl text-slate-800 truncate">
-                DOCai Assistant
-                {userLocation && (
-                  <span className="hidden sm:inline text-xs text-green-600 ml-2">
-                    📍 Location Active
-                  </span>
-                )}
-                {isVoiceListening && (
-                  <span className="inline-flex items-center gap-1 ml-2 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs animate-pulse">
-                    <Mic className="w-3 h-3" />
-                    Listening
-                  </span>
-                )}
-              </h1>
-              <p className="text-xs text-slate-600 hidden sm:block">
-                Emergency Medical Support
-                {isVoiceListening && (
-                  <span className="text-red-600 font-semibold ml-2">
-                    • Voice Active
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            {isVoiceListening && (
-              <div className="bg-red-100 border border-red-300 rounded-full p-2 animate-pulse">
-                <MicOff className="w-4 h-4 text-red-600" />
+      {/* Responsive Header */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur-lg border-b border-slate-200/60 px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 z-20 shadow-sm">
+        <div className="w-full max-w-6xl mx-auto">
+          {/* Main Header Row */}
+          <div className="flex justify-between items-center">
+            {/* Left Side - Back Button + Logo + Title */}
+            <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 min-w-0 flex-1">
+              <Link href="/">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 sm:p-1.5 lg:p-2 h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 hover:bg-slate-100 transition-colors flex-shrink-0"
+                >
+                  <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-slate-600" />
+                </Button>
+              </Link>
+              
+              <div className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                <Brain className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
               </div>
-            )}
+              
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <h1 className="font-bold text-sm sm:text-base lg:text-xl text-slate-800 truncate">
+                    DOCai
+                  </h1>
+                  
+                  {/* Mobile Status Indicators */}
+                  <div className="flex items-center gap-1">
+                    {userLocation && (
+                      <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full hidden xs:inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        <span className="hidden sm:inline">Location</span>
+                        <span className="sm:hidden">📍</span>
+                      </span>
+                    )}
+                    
+                    {isVoiceListening && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs animate-pulse">
+                        <Mic className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <span className="hidden xs:inline">Voice</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <p className="text-xs text-slate-600 hidden sm:block lg:text-sm">
+                  Emergency Medical Support
+                  {isVoiceListening && (
+                    <span className="text-red-600 font-semibold ml-2">
+                      • Voice Active
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
 
-            {/* Add Hospitals Button */}
-            <Link href="/hospitals">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-red-100 transition-colors"
-                title="Find Nearby Hospitals"
-              >
-                <Building2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
-              </Button>
-            </Link>
+            {/* Right Side - Action Buttons */}
+            <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
+              {/* Voice Listening Indicator */}
+              {isVoiceListening && (
+                <div className="bg-red-100 border border-red-300 rounded-full p-1.5 sm:p-2 animate-pulse">
+                  <MicOff className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+                </div>
+              )}
 
-            {/* Health Profile Button */}
-            <Link href="/healthprofile">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-green-100 transition-colors"
-                title="Health Profile Analysis"
-              >
-                <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
-              </Button>
-            </Link>
+              {/* Desktop Navigation Buttons */}
+              <div className="hidden lg:flex items-center gap-1.5">
+                <Link href="/hospitals">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-8 w-8 hover:bg-red-100 transition-colors"
+                    title="Find Nearby Hospitals"
+                  >
+                    <Building2 className="w-4 h-4 text-red-600" />
+                  </Button>
+                </Link>
 
-            {/* First Aid Box Button - NEW */}
-            <Link href="/firstaidbox">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-purple-100 transition-colors"
-                title="First Aid Box Guide"
-              >
-                <Package className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
-              </Button>
-            </Link>
+                <Link href="/healthprofile">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-8 w-8 hover:bg-green-100 transition-colors"
+                    title="Health Profile Analysis"
+                  >
+                    <Activity className="w-4 h-4 text-green-600" />
+                  </Button>
+                </Link>
 
-            {/* Vitals Button */}
-            <Link href="/vitals">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-red-100 transition-colors"
-                title="Vital Signs Monitor"
-              >
-                <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
-              </Button>
-            </Link>
+                <Link href="/firstaidbox">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-8 w-8 hover:bg-purple-100 transition-colors"
+                    title="First Aid Box Guide"
+                  >
+                    <Package className="w-4 h-4 text-purple-600" />
+                  </Button>
+                </Link>
 
-            <Link href="/settings">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1.5 sm:p-2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-slate-100 transition-colors"
-              >
-                <Settings className="w-3 h-3 sm:w-4 sm:h-4 text-slate-600" />
-              </Button>
-            </Link>
-            <SignalIndicators className="scale-75 sm:scale-90 lg:scale-100" />
+                <Link href="/vitals">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-8 w-8 hover:bg-red-100 transition-colors"
+                    title="Vital Signs Monitor"
+                  >
+                    <Heart className="w-4 h-4 text-red-600" />
+                  </Button>
+                </Link>
+
+                <Link href="/settings">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-8 w-8 hover:bg-slate-100 transition-colors"
+                    title="Settings"
+                  >
+                    <Settings className="w-4 h-4 text-slate-600" />
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Tablet Navigation - Most Important Buttons */}
+              <div className="hidden sm:flex lg:hidden items-center gap-1">
+                <Link href="/hospitals">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-7 w-7 hover:bg-red-100 transition-colors"
+                    title="Hospitals"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-red-600" />
+                  </Button>
+                </Link>
+
+                <Link href="/healthprofile">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-7 w-7 hover:bg-green-100 transition-colors"
+                    title="Health Profile"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-green-600" />
+                  </Button>
+                </Link>
+
+                <Link href="/settings">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1.5 h-7 w-7 hover:bg-slate-100 transition-colors"
+                    title="Settings"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-600" />
+                  </Button>
+                </Link>
+
+                {/* Mobile Menu Toggle */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="p-1.5 h-7 w-7 hover:bg-slate-100 transition-colors"
+                  title="More Options"
+                >
+                  <MoreVertical className="w-3.5 h-3.5 text-slate-600" />
+                </Button>
+              </div>
+
+              {/* Mobile Menu Toggle - Only on Small Screens */}
+              <div className="flex sm:hidden items-center gap-1">
+                <Link href="/hospitals">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-1 h-6 w-6 hover:bg-red-100 transition-colors"
+                    title="Hospitals"
+                  >
+                    <Building2 className="w-3 h-3 text-red-600" />
+                  </Button>
+                </Link>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="p-1 h-6 w-6 hover:bg-slate-100 transition-colors"
+                  title="Menu"
+                >
+                  <Menu className="w-3 h-3 text-slate-600" />
+                </Button>
+              </div>
+
+              {/* Signal Indicators */}
+              <SignalIndicators className="scale-75 sm:scale-85 lg:scale-100" />
+            </div>
           </div>
+
+          {/* Mobile/Tablet Dropdown Menu */}
+          {showMobileMenu && (
+            <div className="lg:hidden absolute top-full left-0 right-0 bg-white/98 backdrop-blur-lg border-b border-slate-200 shadow-lg z-30 animate-in slide-in-from-top-2 duration-200">
+              <div className="px-4 py-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <Link href="/healthprofile" onClick={() => setShowMobileMenu(false)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-12 flex flex-col gap-1 hover:bg-green-50 hover:border-green-300"
+                    >
+                      <Activity className="w-4 h-4 text-green-600" />
+                      <span className="text-xs">Health Profile</span>
+                    </Button>
+                  </Link>
+
+                  <Link href="/firstaidbox" onClick={() => setShowMobileMenu(false)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-12 flex flex-col gap-1 hover:bg-purple-50 hover:border-purple-300"
+                    >
+                      <Package className="w-4 h-4 text-purple-600" />
+                      <span className="text-xs">First Aid Kit</span>
+                    </Button>
+                  </Link>
+
+                  <Link href="/vitals" onClick={() => setShowMobileMenu(false)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-12 flex flex-col gap-1 hover:bg-red-50 hover:border-red-300"
+                    >
+                      <Heart className="w-4 h-4 text-red-600" />
+                      <span className="text-xs">Vitals</span>
+                    </Button>
+                  </Link>
+
+                  <Link href="/settings" onClick={() => setShowMobileMenu(false)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-12 flex flex-col gap-1 hover:bg-slate-50 hover:border-slate-300"
+                    >
+                      <Settings className="w-4 h-4 text-slate-600" />
+                      <span className="text-xs">Settings</span>
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Quick Action Buttons for Mobile */}
+                <div className="mt-3 pt-3 border-t border-slate-200">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        if (userLocation) {
+                          getLocationBasedAdvice("I need emergency location-based medical guidance");
+                        } else {
+                          alert("Please enable location access for location-based advice");
+                        }
+                        setShowMobileMenu(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs hover:bg-purple-50 hover:border-purple-300"
+                    >
+                      <MapPin className="w-3 h-3 mr-1" />
+                      Location Help
+                    </Button>
+                    
+                    <Button
+                      onClick={() => {
+                        setInput("I need enhanced treatment guidance with home remedies");
+                        setShowMobileMenu(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs hover:bg-green-50 hover:border-green-300"
+                    >
+                      <Home className="w-3 h-3 mr-1" />
+                      Home Remedies
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Chat Messages */}
+      {/* Chat Messages - Add top padding to account for potential dropdown */}
       <div className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
         <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-4">
           {messages.length === 0 ? (
@@ -819,59 +1006,56 @@ For non-emergency situations, please try again in a moment or consult with a hea
                 symptoms.
               </p>
 
-              {/* Quick Actions */}
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
+              {/* Responsive Quick Actions Grid */}
+              <div className="mt-8 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto">
                 <Button
                   onClick={() => setInput("I need help with first aid")}
                   variant="outline"
-                  className="rounded-full px-4 py-2 text-sm hover:bg-blue-50 hover:border-blue-300 transition-all"
+                  className="h-auto p-3 flex flex-col gap-2 hover:bg-blue-50 hover:border-blue-300 transition-all"
                 >
-                  <Activity className="w-4 h-4 mr-2" />
-                  First Aid Help
+                  <Activity className="w-5 h-5 text-blue-600" />
+                  <span className="text-xs font-medium">First Aid Help</span>
                 </Button>
+
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
-                  className="rounded-full px-4 py-2 text-sm hover:bg-green-50 hover:border-green-300 transition-all"
+                  className="h-auto p-3 flex flex-col gap-2 hover:bg-green-50 hover:border-green-300 transition-all"
                 >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Upload Injury Photo
+                  <Camera className="w-5 h-5 text-green-600" />
+                  <span className="text-xs font-medium">Upload Photo</span>
                 </Button>
 
-                {/* Add Hospitals Quick Action */}
-                <Link href="/hospitals">
+                <Link href="/hospitals" className="contents">
                   <Button
                     variant="outline"
-                    className="rounded-full px-4 py-2 text-sm hover:bg-red-50 hover:border-red-300 transition-all"
+                    className="h-auto p-3 flex flex-col gap-2 hover:bg-red-50 hover:border-red-300 transition-all"
                   >
-                    <Building2 className="w-4 h-4 mr-2" />
-                    Find Hospitals
+                    <Building2 className="w-5 h-5 text-red-600" />
+                    <span className="text-xs font-medium">Find Hospitals</span>
                   </Button>
                 </Link>
 
-                {/* Health Profile Quick Action */}
-                <Link href="/healthprofile">
+                <Link href="/healthprofile" className="contents">
                   <Button
                     variant="outline"
-                    className="rounded-full px-4 py-2 text-sm hover:bg-purple-50 hover:border-purple-300 transition-all"
+                    className="h-auto p-3 flex flex-col gap-2 hover:bg-purple-50 hover:border-purple-300 transition-all"
                   >
-                    <Heart className="w-4 h-4 mr-2" />
-                    Health Analysis
+                    <Heart className="w-5 h-5 text-purple-600" />
+                    <span className="text-xs font-medium">Health Analysis</span>
                   </Button>
                 </Link>
 
-                {/* First Aid Box Quick Action - NEW */}
-                <Link href="/firstaidbox">
+                <Link href="/firstaidbox" className="contents xs:col-span-2 sm:col-span-1">
                   <Button
                     variant="outline"
-                    className="rounded-full px-4 py-2 text-sm hover:bg-indigo-50 hover:border-indigo-300 transition-all"
+                    className="h-auto p-3 flex flex-col gap-2 hover:bg-indigo-50 hover:border-indigo-300 transition-all"
                   >
-                    <Package className="w-4 h-4 mr-2" />
-                    First Aid Kit
+                    <Package className="w-5 h-5 text-indigo-600" />
+                    <span className="text-xs font-medium">First Aid Kit</span>
                   </Button>
                 </Link>
 
-                {/* New Quick Actions for Enhanced Advice and Location Analysis */}
                 <Button
                   onClick={() => {
                     if (userLocation) {
@@ -881,19 +1065,19 @@ For non-emergency situations, please try again in a moment or consult with a hea
                     }
                   }}
                   variant="outline"
-                  className="rounded-full px-4 py-2 text-sm hover:bg-purple-50 hover:border-purple-300 transition-all"
+                  className="h-auto p-3 flex flex-col gap-2 hover:bg-purple-50 hover:border-purple-300 transition-all xs:col-span-2 sm:col-span-1"
                 >
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Location Analysis
+                  <MapPin className="w-5 h-5 text-purple-600" />
+                  <span className="text-xs font-medium">Location Analysis</span>
                 </Button>
 
                 <Button
                   onClick={() => setInput("I need enhanced treatment guidance with home remedies")}
                   variant="outline"
-                  className="rounded-full px-4 py-2 text-sm hover:bg-green-50 hover:border-green-300 transition-all"
+                  className="h-auto p-3 flex flex-col gap-2 hover:bg-green-50 hover:border-green-300 transition-all sm:col-span-2 lg:col-span-1"
                 >
-                  <Home className="w-4 h-4 mr-2" />
-                  Home Remedies
+                  <Home className="w-5 h-5 text-green-600" />
+                  <span className="text-xs font-medium">Home Remedies</span>
                 </Button>
               </div>
             </div>
@@ -1045,8 +1229,8 @@ For non-emergency situations, please try again in a moment or consult with a hea
         </div>
       </div>
 
-      {/* Enhanced Input Area with Visual Feedback */}
-      <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-4 sm:px-6 py-4 sm:py-5">
+      {/* Enhanced Input Area - Already responsive */}
+      <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-2 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-5">
         <div className="w-full max-w-4xl mx-auto space-y-4">
           {/* Image Preview Section */}
           {selectedImage && (

@@ -3,6 +3,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { SignalIndicators } from "@/components/signal-indicators";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import {
   MessageCircle,
   Settings,
@@ -27,6 +29,10 @@ import Link from "next/link";
 const Home = () => {
   return (
     <div className="flex flex-col min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* PWA Components */}
+      <PWAInstallPrompt />
+      <OfflineIndicator />
+
       {/* Header */}
       <div className="sticky top-0 bg-white/90 backdrop-blur-lg border-b border-slate-200/60 px-3 sm:px-6 py-3 sm:py-4 z-10 shadow-sm">
         <div className="w-full max-w-6xl mx-auto flex justify-between items-center">

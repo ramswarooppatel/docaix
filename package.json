@@ -1,12 +1,15 @@
 {
-  "name": "firstaid-ai",
-  "version": "0.1.0",
+  "name": "docai-medical-assistant",
+  "version": "1.0.0",
+  "description": "AI-powered medical emergency assistant PWA",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "pwa:build": "next build && next export",
+    "pwa:icons": "npx pwa-asset-generator public/icon-source.svg public/icons --background '#ffffff' --theme-color '#dc2626' --favicon --manifest public/manifest.json"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
@@ -33,6 +36,7 @@
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "pwa-asset-generator": "^6.3.1"
   }
 }
